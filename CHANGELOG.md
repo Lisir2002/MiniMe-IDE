@@ -7,12 +7,16 @@
 ## [Unreleased]
 
 ### Added
+- M1 数据系统：Room 数据库（projects / source_files / templates）、DAO、四个 Repository 实现
+- 内置模板 seed（空白三件套 / Hello World）、ContentStore 可替换抽象、SettingsRepository
+- M1 本地单测：Repository CRUD / 模板实例化 / 级联删除 / JSON 往返（Robolectric + Room 内存库）
 - M0 工程脚手架：16 个 Gradle 模块、版本目录、编译期架构铁律校验
 - 本地单元测试：数据模型 / 常量 / 语言契约共 10 个用例
 - 工程规范体系：提交 / 发版说明 / 日志 / 文档规范
 
 ### Changed
 - 修正 KSP 版本（2.2.21-2.0.2 → 2.2.21-2.0.5）、统一库模块 namespace / Kotlin 插件配置
+- 补齐 gradle.properties（useAndroidX 等），Robolectric 单测固定模拟 SDK 34（Java 17 兼容）
 
 ## [0.1.0-rc1] - 2026-11-18
 

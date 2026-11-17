@@ -1,6 +1,6 @@
 package com.mini.ide
 
-import androidx.compose.foundation.BasicText
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +20,6 @@ fun MiniMeNavHost() {
         modifier = Modifier.fillMaxSize().background(colors.background),
         contentAlignment = Alignment.Center,
     ) {
-        BasicText(text = "MiniMe-IDE", color = colors.onBackground)
+        BasicText(text = "MiniMe-IDE", color = { colors.onBackground })
     }
 }

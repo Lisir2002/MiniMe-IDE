@@ -3,6 +3,7 @@ package com.mini.ide.core.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** M0 契约测试：验证共享数据模型的默认行为与值语义。 */
@@ -50,5 +51,19 @@ class ModelsTest {
             setOf(FileKind.HTML, FileKind.CSS, FileKind.JS, FileKind.DSL),
             FileKind.entries.toSet(),
         )
+    }
+
+    @Test
+    fun `设置默认值为暗色主题与合理字号`() {
+        val s = Settings()
+        assertEquals(ThemeMode.DARK, s.themeMode)
+        assertTrue(s.editorFontSizeSp in 12..24)
+        assertTrue(s.autoSave)
+        assertTrue(s.sandboxMode)
+    }
+
+    @Test
+    fun `SourceFile 默认 sortOrder 为零`() {
+        assertEquals(0, SourceFile("f", "p", "a.js", FileKind.JS).sortOrder)
     }
 }
