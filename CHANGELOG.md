@@ -7,6 +7,12 @@
 ## [Unreleased]
 
 ### Added
+- M2 引擎层：S4 四大引擎（Bridge/Editor/Render/Project）+ S5 语言系统（原 M3 提前合并，语言是引擎依赖）
+  - 桥接协议编解码（Base64 文本传输 + JSON 消息）、主题序列化、预览 HTML 拼装
+  - 两个可测性端口：`WebViewPort`（解耦 Android WebView）、`EditorTheme`（跨层纯数据，解耦 Compose）
+  - 项目引擎内存脏镜像：编辑即预览、自动保存写回、数据库刷新不冲掉未保存内容
+  - HTML/CSS/JS 三套教学向 Profile + LanguageRegistry（Phase3 自研 DSL 可插拔，编辑器零改动）
+  - M2 本地单测：编解码 / 主题 / HTML 拼装 / 四引擎行为 / 项目编排 / 语言注册表（共 40 用例，JVM 可测）
 - M1 数据系统：Room 数据库（projects / source_files / templates）、DAO、四个 Repository 实现
 - 内置模板 seed（空白三件套 / Hello World）、ContentStore 可替换抽象、SettingsRepository
 - M1 本地单测：Repository CRUD / 模板实例化 / 级联删除 / JSON 往返（Robolectric + Room 内存库）

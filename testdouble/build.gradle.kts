@@ -4,7 +4,9 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":data:api"))
-    implementation(project(":engine:api"))
-    implementation(project(":core:model"))
+    api(project(":core:model"))
+    api(project(":data:api"))
+    api(project(":engine:api"))
+    api(project(":language:api"))
+    api(libs.coroutines.core)
 }

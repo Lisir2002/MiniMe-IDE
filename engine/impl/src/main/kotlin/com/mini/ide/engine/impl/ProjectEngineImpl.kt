@@ -1,0 +1,108 @@
+package com.mini.ide.engine.impl
+
+import com.mini.ide.core.model.FileKind
+import com.mini.ide.core.model.Project
+import com.mini.ide.core.model.SourceFile
+import com.mini.ide.data.api.FileRepository
+import com.mini.ide.data.api.ProjectRepository
+import com.mini.ide.engine.api.PreviewDocument
+import com.mini.ide.engine.api.ProjectEngine
+import com.mini.ide.engine.api.ProjectState
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+/**
+ * 项目引擎实现：数据层与编辑/渲染层的编排者，持有活跃项目单一真相。
+ *
+ * 状态管理：
+ * - 数据库 Flow（files） + 内存脏镜像（_dirtyContent）合并，未保存编辑不丢失；
+ * - saveActive 把脏内容写回 Repository 后清除镜像；
+ * - currentPreviewDocument 从内存镜像拼三文件预览文档。
+ *
+ * 依赖纯接口 + 可注入 dispatcher，可用 Fake Repository + StandardTestDispatcher JVM 单测。
+ */
+class ProjectEngineImpl(
+    private val projectRepo: ProjectRepository,
+    private val fileRepo: FileRepository,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+) : ProjectEngine {
+
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+
+    private val _project = MutableStateFlow<Project?>(null)
+    private val _files = MutableStateFlow<List<SourceFile>>(emptyList())
+    private val _activeFileId = MutableStateFlow("")
+    private val _dirtyContent = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    override fun open(projectId: String): Flow<ProjectState> {
+        scope.launch {
+            _project.value = projectRepo.get(projectId)
+            fileRepo.observeByProject(projectId).collect { dbFiles ->
+                // 合并：数据库列表为骨架，内存脏内容覆盖 content
+                val merged = dbFiles.map { file ->
+                    _dirtyContent.value[file.id]?.let { file.copy(content = it) } ?: file
+                }
+                _files.value = merged
+                if (_activeFileId.value.isEmpty() || merged.none { it.id == _activeFileId.value }) {
+                    _activeFileId.value = merged.firstOrNull()?.id.orEmpty()
+                }
+            }
+        }
+        return observeActive().map { it!! }
+    }
+
+    override fun observeActive(): Flow<ProjectState?> = combine(
+        _project, _files, _activeFileId, _dirtyContent,
+    ) { project, files, activeId, dirty ->
+        if (project == null) null else ProjectState(
+            project = project,
+            files = files,
+            activeFileId = activeId,
+            isDirty = dirty.isNotEmpty(),
+        )
+    }
+
+    override suspend fun saveActive() {
+        val dirty = _dirtyContent.value
+        dirty.forEach { (fileId, content) -> fileRepo.updateContent(fileId, content) }
+        _dirtyContent.value = emptyMap()
+    }
+
+    override fun switchFile(fileId: String) {
+        if (_files.value.any { it.id == fileId }) _activeFileId.value = fileId
+    }
+
+    override fun markContentDirty(fileId: String, content: String) {
+        _dirtyContent.value = _dirtyContent.value + (fileId to content)
+        // 同步内存镜像，使 observeActive 立即反映最新内容
+        _files.value = _files.value.map { if (it.id == fileId) it.copy(content = content) else it }
+    }
+
+    override fun currentPreviewDocument(baseUrl: String): PreviewDocument? {
+        val files = _files.value
+        if (files.isEmpty()) return null
+        fun contentOf(kind: FileKind) = files.firstOrNull { it.kind == kind }?.content.orEmpty()
+        return PreviewDocumentBuilder.build(
+            html = contentOf(FileKind.HTML),
+            css = contentOf(FileKind.CSS),
+            js = contentOf(FileKind.JS),
+            baseUrl = baseUrl,
+        )
+    }
+
+    override fun close() {
+        scope.cancel()
+        _project.value = null
+        _files.value = emptyList()
+        _dirtyContent.value = emptyMap()
+        _activeFileId.value = ""
+    }
+}
