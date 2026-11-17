@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>MiniMe Editor</title>
+<style>
+  :root {
+    --cm-bg: #000000;
+    --cm-fg: #ECECF2;
+    --cm-gutter: #1C1C1F;
+    --cm-selection: #400A84FF;
+    --cm-cursor: #0A84FF;
+    --cm-keyword: #FF7B72;
+    --cm-string: #A5D6FF;
+    --cm-number: #79C0FF;
+    --cm-comment: #6E6E7A;
+    --cm-tag: #7EE787;
+    --cm-attribute: #D2A8FF;
+    --cm-font-size: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--cm-bg); overflow: hidden; }
+  #wrap { position: relative; width: 100%; height: 100%; }
+  /* 高亮层（底层） */
+  #highlight {
+    position: absolute; inset: 0; margin: 0; padding: 12px;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: var(--cm-font-size); line-height: 1.5;
+    white-space: pre-wrap; overflow-wrap: break-word;
+    color: var(--cm-fg); pointer-events: none; overflow: hidden;
+    tab-size: 2;
+  }
+  /* 输入层（顶层，文字透明，仅显示光标与选区） */
+  #input {
+    position: absolute; inset: 0; margin: 0; padding: 12px;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: var(--cm-font-size); line-height: 1.5;
+    white-space: pre-wrap; overflow-wrap: break-word;
+    color: transparent; -webkit-text-fill-color: transparent;
+    caret-color: var(--cm-cursor);
+    background: transparent; border: 0; outline: 0; resize: none;
+    width: 100%; height: 100%; overflow: auto; tab-size: 2;
+  }
+  #input::selection { background: var(--cm-selection); -webkit-text-fill-color: transparent; }
+  .tok-comment { color: var(--cm-comment); font-style: italic; }
+  .tok-string  { color: var(--cm-string); }
+  .tok-number  { color: var(--cm-number); }
+  .tok-keyword { color: var(--cm-keyword); }
+  .tok-tag     { color: var(--cm-tag); }
+  .tok-attr    { color: var(--cm-attribute); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <pre id="highlight" aria-hidden="true"></pre>
+  <textarea id="input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" wrap="soft"></textarea>
+</div>
+<script>
+(function () {
+  "use strict";
+  var input = document.getElementById("input");
+  var highlight = document.getElementById("highlight");
+  var currentMode = "html";
+  var wordWrap = true;
+
+  /* ---------- UTF-8 安全的 Base64（与 Kotlin Base64.getEncoder 对齐） ---------- */
+  function encodeText(str) {
+    var bytes = new TextEncoder().encode(str);
+    var bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function decodeText(b64) {
+    try {
+      var bin = atob(b64);
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    } catch (e) { return ""; }
+  }
+
+  /* ---------- 回传 Kotlin（JS → Kotlin 统一入口） ---------- */
+  function post(type, payload) {
+    if (window.AndroidBridge && typeof window.AndroidBridge.post === "function") {
+      window.AndroidBridge.post(JSON.stringify({ type: type, payload: payload || "" }));
+    }
+  }
+
+  /* ---------- 轻量语法高亮（按 mode 选择关键词集） ---------- */
+  var KEYWORDS = {
+    html: ["div","span","html","head","body","p","a","img","ul","li","h1","h2","h3","table","tr","td","br","input","button","section","article","header","footer","nav","main","style","script","link","meta","title"],
+    css: ["color","background","margin","padding","font-size","display","flex","width","height","border","position","absolute","relative","grid","align-items","justify-content","opacity","transform","transition"],
+    js: ["var","let","const","function","return","if","else","for","while","new","class","this","true","false","null","undefined","async","await","=>","document","window","console"]
+  };
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function modeFamily() {
+    if (currentMode.indexOf("css") >= 0) return "css";
+    if (currentMode.indexOf("javascript") >= 0 || currentMode.indexOf("js") >= 0) return "js";
+    return "html";
+  }
+  function renderHighlight() {
+    var code = input.value;
+    var fam = modeFamily();
+    var kw = KEYWORDS[fam] || [];
+    // 单个扫描：先识别注释与字符串，再识别关键词/标签/数字
+    var out = "";
+    var i = 0;
+    var n = code.length;
+    var commentStart = fam === "html" ? "<!--" : "/*";
+    var commentEnd = fam === "html" ? "-->" : "*/";
+    while (i < n) {
+      // 注释
+      if (code.substr(i, commentStart.length) === commentStart) {
+        var ce = code.indexOf(commentEnd, i + commentStart.length);
+        var endComment = ce < 0 ? n : ce + commentEnd.length;
+        out += '<span class="tok-comment">' + escapeHtml(code.substring(i, endComment)) + "</span>";
+        i = endComment; continue;
+      }
+      // JS 行注释
+      if (fam === "js" && code.substr(i, 2) === "//") {
+        var le = code.indexOf("\n", i);
+        var endLine = le < 0 ? n : le;
+        out += '<span class="tok-comment">' + escapeHtml(code.substring(i, endLine)) + "</span>";
+        i = endLine; continue;
+      }
+      // 字符串
+      var ch = code.charAt(i);
+      if (ch === '"' || ch === "'" || ch === "`") {
+        var j = i + 1;
+        while (j < n) {
+          if (code.charAt(j) === "\\") { j += 2; continue; }
+          if (code.charAt(j) === ch) { j++; break; }
+          j++;
+        }
+        out += '<span class="tok-string">' + escapeHtml(code.substring(i, j)) + "</span>";
+        i = j; continue;
+      }
+      // HTML 标签
+      if (fam === "html" && ch === "<") {
+        var tg = i + 1;
+        if (code.charAt(tg) === "/") tg++;
+        while (tg < n && /[A-Za-z0-9-]/.test(code.charAt(tg))) tg++;
+        if (tg > i + 1) {
+          out += '<span class="tok-tag">' + escapeHtml(code.substring(i, tg)) + "</span>";
+          i = tg; continue;
+        }
+      }
+      // 数字
+      if (/[0-9]/.test(ch)) {
+        var num = i;
+        while (num < n && /[0-9.]/.test(code.charAt(num))) num++;
+        out += '<span class="tok-number">' + escapeHtml(code.substring(i, num)) + "</span>";
+        i = num; continue;
+      }
+      // 关键词 / 属性名
+      if (/[A-Za-z_$]/.test(ch)) {
+        var w = i;
+        while (w < n && /[A-Za-z0-9_$-]/.test(code.charAt(w))) w++;
+        var word = code.substring(i, w);
+        var isKw = false;
+        for (var k = 0; k < kw.length; k++) { if (word === kw[k]) { isKw = true; break; } }
+        if (fam !== "html" && /^--/.test(word)) isKw = true;
+        out += isKw ? '<span class="tok-keyword">' + escapeHtml(word) + "</span>" : escapeHtml(word);
+        i = w; continue;
+      }
+      out += escapeHtml(ch);
+      i++;
+    }
+    highlight.innerHTML = out + "\n";
+    highlight.scrollTop = input.scrollTop;
+    highlight.scrollLeft = input.scrollLeft;
+  }
+
+  /* ---------- 光标行列 ---------- */
+  function reportCursor() {
+    var pos = input.selectionStart;
+    var before = input.value.substring(0, pos);
+    var lines = before.split("\n");
+    post("CURSOR_MOVED", (lines.length) + ":" + (lines[lines.length - 1].length + 1));
+  }
+
+  /* ---------- 内容变化 ---------- */
+  var debounceTimer = null;
+  input.addEventListener("input", function () {
+    renderHighlight();
+    reportCursor();
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () { post("CONTENT_CHANGED", encodeText(input.value)); }, 40);
+  });
+  input.addEventListener("scroll", function () {
+    highlight.scrollTop = input.scrollTop;
+    highlight.scrollLeft = input.scrollLeft;
+  });
+  input.addEventListener("keyup", reportCursor);
+  input.addEventListener("click", reportCursor);
+  // Tab 插入两空格
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      var s = input.selectionStart, en = input.selectionEnd;
+      input.setRangeText("  ", s, en, "end");
+      renderHighlight();
+      post("CONTENT_CHANGED", encodeText(input.value));
+    }
+  });
+
+  /* ---------- Kotlin → JS：window.__ide.dispatch ---------- */
+  window.__ide = {
+    dispatch: function (msg) {
+      if (!msg || !msg.method) return;
+      var args = msg.args || [];
+      switch (msg.method) {
+        case "SET_CONTENT":
+          input.value = decodeText(args[0] || "");
+          renderHighlight();
+          break;
+        case "SET_LANGUAGE":
+          currentMode = args[0] || "html";
+          renderHighlight();
+          break;
+        case "SET_THEME":
+          try {
+            var theme = JSON.parse(args[0] || "{}");
+            var root = document.documentElement;
+            Object.keys(theme).forEach(function (key) { root.style.setProperty(key, theme[key]); });
+          } catch (e) {}
+          break;
+        case "SET_FONT_SIZE":
+          document.documentElement.style.setProperty("--cm-font-size", (args[0] || 14) + "px");
+          break;
+        case "SET_WORD_WRAP":
+          wordWrap = !!args[0];
+          input.wrap = wordWrap ? "soft" : "off";
+          input.style.whiteSpace = wordWrap ? "pre-wrap" : "pre";
+          highlight.style.whiteSpace = wordWrap ? "pre-wrap" : "pre";
+          break;
+        case "INSERT_TEXT":
+          var txt = decodeText(args[0] || "");
+          var s = input.selectionStart, en = input.selectionEnd;
+          input.setRangeText(txt, s, en, "end");
+          renderHighlight();
+          post("CONTENT_CHANGED", encodeText(input.value));
+          break;
+        case "FOCUS":
+          input.focus();
+          break;
+        case "UNDO":
+          document.execCommand("undo");
+          renderHighlight();
+          post("CONTENT_CHANGED", encodeText(input.value));
+          break;
+        case "REDO":
+          document.execCommand("redo");
+          renderHighlight();
+          post("CONTENT_CHANGED", encodeText(input.value));
+          break;
+      }
+    }
+  };
+
+  renderHighlight();
+  post("READY", "");
+})();
+</script>
+</body>
+</html>

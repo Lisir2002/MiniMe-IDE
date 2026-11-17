@@ -47,6 +47,27 @@ object DataProvidesModule {
 
     @Provides
     @Singleton
+    fun provideDbContentStore(dao: FileDao): DbContentStore = DbContentStore(dao)
+
+    @Provides
+    @Singleton
+    fun provideTemplateRepositoryImpl(db: MiniMeDatabase): TemplateRepositoryImpl =
+        TemplateRepositoryImpl(db)
+
+    @Provides
+    @Singleton
+    fun provideFileRepositoryImpl(db: MiniMeDatabase, contentStore: ContentStore): FileRepositoryImpl =
+        FileRepositoryImpl(db, contentStore)
+
+    @Provides
+    @Singleton
+    fun provideProjectRepositoryImpl(
+        db: MiniMeDatabase,
+        templates: TemplateRepository,
+    ): ProjectRepositoryImpl = ProjectRepositoryImpl(db, templates)
+
+    @Provides
+    @Singleton
     fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
         SettingsRepositoryImpl(context)
 }
