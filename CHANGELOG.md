@@ -7,6 +7,15 @@
 ## [Unreleased]
 
 ### Added
+- M4 MVP 闭环：项目列表 → 编辑 → 即时预览 → 保存端到端打通（`e7f347f` 之后）
+  - S2 自绘组件库 `:core:uicommon`：磨砂玻璃/自绘按钮/卡片/顶栏/标签栏/语义化 SVG 图标/spring 动效/排版令牌
+  - `:feature:project`：项目列表 ViewModel + 自绘卡片 UI，模板实例化 seed，打开信号导航
+  - `:feature:editor`：编辑 ViewModel + 文件 Tab 工具栏 + WebView 适配端口；脏标记/自动保存/文件切换
+  - `:feature:preview`：预览 ViewModel + 独立预览桥 + 控制台日志面板；300ms 防抖即时渲染
+  - 离线编辑器内核（透明 textarea + 语法高亮镜像），完整实现 Bridge 协议，可无缝替换 CodeMirror 6
+  - 预览桥接脚本注入器：劫持 console/error 经独立 AndroidBridge 回传，纯函数可 JVM 单测
+  - `LanguageProvider` 只读端口（language:api），feature 按 FileKind 取语言配置，遵守"不依赖 impl"铁律
+  - M4 本地单测：三个 feature 的 ViewModel + 桥接脚本注入（共 14 用例）
 - M2 引擎层：S4 四大引擎（Bridge/Editor/Render/Project）+ S5 语言系统（原 M3 提前合并，语言是引擎依赖）
   - 桥接协议编解码（Base64 文本传输 + JSON 消息）、主题序列化、预览 HTML 拼装
   - 两个可测性端口：`WebViewPort`（解耦 Android WebView）、`EditorTheme`（跨层纯数据，解耦 Compose）
@@ -21,6 +30,8 @@
 - 工程规范体系：提交 / 发版说明 / 日志 / 文档规范
 
 ### Changed
+- EditorEngine / RenderEngine 接口继承 BridgeHandler，app 层统一装配 Fanout 桥接处理器
+- 补全 Hilt 依赖图：Repository impl / DbContentStore / DefaultDispatcherProvider 改由 Module @Provides 构造
 - 修正 KSP 版本（2.2.21-2.0.2 → 2.2.21-2.0.5）、统一库模块 namespace / Kotlin 插件配置
 - 补齐 gradle.properties（useAndroidX 等），Robolectric 单测固定模拟 SDK 34（Java 17 兼容）
 
