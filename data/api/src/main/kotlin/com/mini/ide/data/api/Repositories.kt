@@ -1,4 +1,4 @@
-package com.mini.ide.data/api
+package com.mini.ide.data.api
 
 import kotlinx.coroutines.flow.Flow
 

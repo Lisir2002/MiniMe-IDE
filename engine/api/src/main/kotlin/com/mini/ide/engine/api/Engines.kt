@@ -1,4 +1,4 @@
-package com.mini.ide.engine/api
+package com.mini.ide.engine.api
 
 import kotlinx.coroutines.flow.SharedFlow
 

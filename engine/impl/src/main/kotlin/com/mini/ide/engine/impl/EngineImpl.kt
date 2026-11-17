@@ -1,4 +1,4 @@
-package com.mini.ide.engine/impl
+package com.mini.ide.engine.impl
 
 import com.mini.ide.engine.api.EditorEngine
 

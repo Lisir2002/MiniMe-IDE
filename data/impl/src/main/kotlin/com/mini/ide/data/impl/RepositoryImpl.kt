@@ -1,4 +1,4 @@
-package com.mini.ide.data/impl
+package com.mini.ide.data.impl
 
 import com.mini.ide.data.api.ProjectRepository
 import com.mini.ide.core.model.Project

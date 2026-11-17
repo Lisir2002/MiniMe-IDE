@@ -1,4 +1,4 @@
-package com.mini.ide.language/api
+package com.mini.ide.language.api
 
 enum class LanguageId { HTML, CSS, JS, DSL }
 

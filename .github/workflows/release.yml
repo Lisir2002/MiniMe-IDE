@@ -1,6 +1,7 @@
 name: Release Build
 
 # 正式版 x.y.z：手动触发 + 排班硬门禁，服务端执行，不可绕过。
+# 全量测试、构建、versionCode 递增均在云端完成（本地不做）。
 on:
   workflow_dispatch:
     inputs:
@@ -13,19 +14,34 @@ permissions:
   contents: write
 
 jobs:
-  release-gate:
+  release:
+    name: 正式版发版
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: 排班门禁校验
+      - name: 结构化日志 - 开始
+        run: echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [release ] 正式版发版开始 version=${{ inputs.version }}"
+
+      - name: 排班门禁校验（不可绕过）
         run: python3 scripts/check_schedule.py --version "${{ inputs.version }}" --schedule release/schedule.yaml
+
+      - name: 校验 CHANGELOG 含该正式版条目
+        run: |
+          V="${{ inputs.version }}"
+          if grep -q "\[$V\] - " CHANGELOG.md; then
+            echo "[INFO   ] [release ] CHANGELOG 含正式版条目 version=$V"
+          else
+            echo "[ERROR  ] [release ] CHANGELOG 缺少正式版条目 version=$V"
+            exit 1
+          fi
 
       - name: 设置 JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: 设置 Android SDK
         uses: android-actions/setup-android@v3
@@ -33,10 +49,16 @@ jobs:
       - name: 授予 gradlew 执行权限
         run: chmod +x gradlew
 
-      - name: 构建正式版（去 rc 后缀）
-        run: ./gradlew assembleRelease -PreleaseVersion="${{ inputs.version }}"
+      - name: 全量单元测试
+        run: ./gradlew test --no-daemon --stacktrace
 
-      - name: versionCode +1
+      - name: 架构铁律校验
+        run: ./gradlew checkModuleRules --no-daemon
+
+      - name: 构建正式版（去 rc 后缀）
+        run: ./gradlew assembleRelease --no-daemon -PreleaseVersion="${{ inputs.version }}"
+
+      - name: versionCode +1（云端唯一执行方）
         run: python3 scripts/bump_versioncode.py
 
       - name: 提交 versionCode 递增
@@ -44,7 +66,7 @@ jobs:
           git config user.name "ci-bot"
           git config user.email "ci-bot@users.noreply.github.com"
           git add release/versioncode.txt
-          git commit -m "chore: bump versionCode after release ${{ inputs.version }}" || echo "no changes"
+          git commit -m "chore(release): bump versionCode after ${{ inputs.version }}" || echo "no changes"
           git push
 
       - name: 上传正式版产物
@@ -52,3 +74,7 @@ jobs:
         with:
           name: minimide-release-${{ inputs.version }}
           path: app/build/outputs/apk/release/*.apk
+
+      - name: 结构化日志 - 完成
+        if: success()
+        run: echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [release ] 正式版发版完成 version=${{ inputs.version }}"

@@ -29,5 +29,9 @@ keystore.properties
 .DS_Store
 Thumbs.db
 
+# Python
+__pycache__/
+*.pyc
+
 # CI / 日志
 *.log

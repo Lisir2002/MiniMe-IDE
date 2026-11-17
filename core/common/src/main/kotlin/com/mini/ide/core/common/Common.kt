@@ -1,4 +1,4 @@
-package com.mini.ide.core/common
+package com.mini.ide.core.common
 
 object MiniMeConstants {
     const val APP_NAME = "MiniMe-IDE"

@@ -46,9 +46,20 @@ tasks.register("checkModuleRules") {
     }
 }
 
-// 让 build 触发校验（afterEvaluate 挂载到各子项目 check）
+// 统一配置：所有 android.library 模块的 SDK 与 Java 版本（配置收敛，避免逐模块漂移）
 subprojects {
     plugins.withId("com.android.library") {
+        extensions.configure<com.android.build.gradle.LibraryExtension> {
+            // 命名空间按模块路径推导：:core:common -> com.mini.ide.core.common
+            namespace = "com.mini.ide" + path.replace(':', '.')
+            compileSdk = 36
+            defaultConfig { minSdk = 31 }
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+        }
+        // 让 build 触发架构铁律校验
         tasks.named("check") { dependsOn(rootProject.tasks.named("checkModuleRules")) }
     }
 }

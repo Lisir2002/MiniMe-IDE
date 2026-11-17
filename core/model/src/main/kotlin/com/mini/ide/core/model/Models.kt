@@ -1,4 +1,4 @@
-package com.mini.ide.core/model
+package com.mini.ide.core.model
 
 enum class FileKind { HTML, CSS, JS, DSL }
 

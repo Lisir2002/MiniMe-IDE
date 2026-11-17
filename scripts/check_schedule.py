@@ -11,16 +11,19 @@
   4. 今天 >= window 日期
   5. scheduledBy == 预期 owner
   6. sourceRc 为合法 x.y.z-rcN 且与 version 主版本一致
-任一失败 -> exit 1，CI 据此终止发布。
+任一失败 -> exit 1，CI 据此终止发布。日志格式遵循 docs/CONVENTIONS.md §3。
 """
 import argparse
 import datetime as dt
 import re
 import sys
 
+from common_log import error, info
+
 OWNER = "Lisir2002"
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 RCVER = re.compile(r"^\d+\.\d+\.\d+-rc\d+$")
+MODULE = "gate"
 
 
 def parse_schedule(path):
@@ -33,9 +36,7 @@ def parse_schedule(path):
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
-            if stripped == "releases: []":
-                continue
-            if stripped == "releases:":
+            if stripped in ("releases: []", "releases:"):
                 continue
             if stripped.startswith("- "):
                 if current:
@@ -51,6 +52,11 @@ def parse_schedule(path):
     return records
 
 
+def fail(message: str, **kv) -> int:
+    error(MODULE, "发版门禁拒绝：" + message, **kv)
+    return 1
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", required=True)
@@ -60,38 +66,31 @@ def main():
 
     v = args.version
     if not SEMVER.match(v):
-        print(f"[门禁失败] 正式版版本号必须符合 x.y.z，收到: {v}")
-        return 1
+        return fail("版本号必须为 x.y.z（无 rc 后缀）", version=v)
 
     records = parse_schedule(args.schedule)
     match = next((r for r in records if r.get("version") == v), None)
     if not match:
-        print(f"[门禁失败] 排班表中无版本 {v} 的记录")
-        return 1
+        return fail("排班表中无该版本记录", version=v)
     if match.get("status") != "approved":
-        print(f"[门禁失败] 版本 {v} 状态为 {match.get('status')}，非 approved")
-        return 1
+        return fail("状态非 approved", version=v, status=match.get("status"))
     if match.get("scheduledBy") != args.owner:
-        print(f"[门禁失败] 排班人 {match.get('scheduledBy')} 非 owner {args.owner}")
-        return 1
+        return fail("排班人非 owner", version=v, scheduledBy=match.get("scheduledBy"), owner=args.owner)
 
     window = match.get("window")
     if window:
         try:
             win_date = dt.date.fromisoformat(window)
         except ValueError:
-            print(f"[门禁失败] window 日期格式错误: {window}")
-            return 1
+            return fail("window 日期格式错误", version=v, window=window)
         if dt.date.today() < win_date:
-            print(f"[门禁失败] 未到发版窗口 {window}（今天 {dt.date.today()}）")
-            return 1
+            return fail("未到发版窗口", version=v, window=window, today=str(dt.date.today()))
 
     src = match.get("sourceRc", "")
     if not RCVER.match(src) or not src.startswith(v + "-rc"):
-        print(f"[门禁失败] sourceRc {src} 不合法或不匹配版本 {v}")
-        return 1
+        return fail("sourceRc 不合法或不匹配", version=v, sourceRc=src)
 
-    print(f"[门禁通过] {v} 已排班批准（来源 {src}，排班人 {match['scheduledBy']}）")
+    info(MODULE, "发版门禁通过", version=v, sourceRc=src, scheduledBy=match["scheduledBy"])
     return 0
 
 
