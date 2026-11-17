@@ -8,18 +8,31 @@ import com.mini.ide.data.api.FileRepository
 import com.mini.ide.data.api.ProjectRepository
 import com.mini.ide.data.api.SettingsRepository
 import com.mini.ide.data.api.TemplateRepository
+import com.mini.ide.core.model.FileKind
 import com.mini.ide.engine.api.BridgeEngine
 import com.mini.ide.engine.api.BridgeHandler
 import com.mini.ide.engine.api.BridgeMethod
+import com.mini.ide.engine.api.EditorEngine
+import com.mini.ide.engine.api.EditorEvent
+import com.mini.ide.engine.api.ProjectEngine
+import com.mini.ide.engine.api.ProjectState
+import com.mini.ide.engine.api.RenderEngine
+import com.mini.ide.engine.api.RenderEvent
+import com.mini.ide.core.model.EditorTheme
+import com.mini.ide.engine.api.PreviewDocument
 import com.mini.ide.engine.api.WebViewPort
 import com.mini.ide.language.api.BracketPair
 import com.mini.ide.language.api.CompletionItem
 import com.mini.ide.language.api.HighlightSpec
 import com.mini.ide.language.api.LanguageId
+import com.mini.ide.language.api.LanguageProvider
 import com.mini.ide.language.api.LanguageProfile
 import com.mini.ide.language.api.Snippet
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.filterNotNull
 
 /** 记录所有 JS 调用与加载数据的 WebView 端口，供引擎单测断言。 */
 class FakeWebViewPort : WebViewPort {
@@ -134,4 +147,96 @@ object FakeLanguageProfile : LanguageProfile {
     override val snippets = listOf(Snippet("html", "<html>$0</html>", "HTML 骨架", com.mini.ide.language.api.SnippetScope.HTML))
     override val brackets = listOf(BracketPair('(', ')'), BracketPair('{', '}'))
     override val autoCloseChars = setOf('"', '\'')
+}
+
+/** 可发出事件的编辑引擎 Fake，供 EditorViewModel 单测。 */
+class FakeEditorEngine : EditorEngine {
+    val loaded = mutableListOf<Triple<String, String, LanguageId>>()
+    var currentText: String = ""
+    private val _events = MutableSharedFlow<EditorEvent>(extraBufferCapacity = 64)
+    override val events: SharedFlow<EditorEvent> = _events
+
+    fun emit(event: EditorEvent) { _events.tryEmit(event) }
+
+    override fun bind(port: WebViewPort, language: LanguageProfile, theme: EditorTheme) = Unit
+    override fun load(fileId: String, content: String, language: LanguageProfile) {
+        currentText = content
+        loaded += Triple(fileId, content, language.id)
+    }
+    override fun currentContent(): String = currentText
+    override fun insertText(text: String) { currentText += text }
+    override fun undo() = Unit
+    override fun redo() = Unit
+    override fun setTheme(theme: EditorTheme) = Unit
+    override fun setFontSize(sp: Int) = Unit
+    override fun setWordWrap(enabled: Boolean) = Unit
+    override fun onMessage(type: com.mini.ide.engine.api.BridgeMessage, payload: String) = Unit
+    override fun release() = Unit
+}
+
+/** 记录渲染调用的渲染引擎 Fake，供 PreviewViewModel 单测。 */
+class FakeRenderEngine : RenderEngine {
+    val rendered = mutableListOf<PreviewDocument>()
+    var reloadCount = 0
+    private val _events = MutableSharedFlow<RenderEvent>(extraBufferCapacity = 64)
+    override val events: SharedFlow<RenderEvent> = _events
+
+    fun emit(event: RenderEvent) { _events.tryEmit(event) }
+
+    override fun bind(port: WebViewPort) = Unit
+    override fun render(document: PreviewDocument) { rendered += document }
+    override fun reload() { reloadCount++ }
+    override fun onMessage(type: com.mini.ide.engine.api.BridgeMessage, payload: String) {
+        // 与 RenderEngineImpl 行为对齐：CONSOLE payload = LEVEL|line|message
+        if (type == com.mini.ide.engine.api.BridgeMessage.CONSOLE) {
+            val parts = payload.split("|", limit = 3)
+            if (parts.size == 3) {
+                val level = runCatching { com.mini.ide.engine.api.LogLevel.valueOf(parts[0]) }
+                    .getOrDefault(com.mini.ide.engine.api.LogLevel.LOG)
+                _events.tryEmit(RenderEvent.Console(level, parts[2], parts[1].toIntOrNull() ?: 0))
+            }
+        } else if (type == com.mini.ide.engine.api.BridgeMessage.RUNTIME_ERROR) {
+            val parts = payload.split("|", limit = 3)
+            if (parts.size == 3) {
+                _events.tryEmit(RenderEvent.RuntimeError(parts[2], parts[1], parts[0].toIntOrNull() ?: 0))
+            }
+        }
+    }
+    override fun release() = Unit
+}
+
+/** 可编程的项目引擎 Fake，供 Editor/Preview ViewModel 单测。 */
+class FakeProjectEngine : ProjectEngine {
+    var state: ProjectState? = null
+    val dirtyMarks = mutableListOf<Pair<String, String>>()
+    var saveCount = 0
+    var closed = false
+    var previewDocument: PreviewDocument? = null
+    private val _state = MutableStateFlow<ProjectState?>(null)
+
+    fun pushState(value: ProjectState?) { state = value; _state.value = value }
+
+    override fun open(projectId: String): Flow<ProjectState> =
+        _state.filterNotNull()
+    override fun observeActive(): Flow<ProjectState?> = _state
+    override suspend fun saveActive() { saveCount++ }
+    override fun switchFile(fileId: String) { state = state?.copy(activeFileId = fileId); _state.value = state }
+    override fun markContentDirty(fileId: String, content: String) {
+        dirtyMarks += fileId to content
+        state = state?.copy(isDirty = true); _state.value = state
+    }
+    override fun currentPreviewDocument(baseUrl: String): PreviewDocument? = previewDocument
+    override fun close() { closed = true }
+}
+
+/** 三语言 Provider Fake。 */
+class FakeLanguageProvider : LanguageProvider {
+    private val profiles = mapOf(
+        FileKind.HTML to FakeLanguageProfile,
+        FileKind.CSS to FakeLanguageProfile,
+        FileKind.JS to FakeLanguageProfile,
+    )
+    override fun forKind(kind: FileKind): LanguageProfile =
+        profiles[kind] ?: FakeLanguageProfile
+    override fun all(): List<LanguageProfile> = profiles.values.distinct()
 }

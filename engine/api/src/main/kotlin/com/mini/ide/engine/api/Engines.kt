@@ -5,8 +5,8 @@ import com.mini.ide.language.api.LanguageProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 
-/** ① 编辑引擎：封装 CodeMirror 6，持有当前文件与光标状态。 */
-interface EditorEngine {
+/** ① 编辑引擎：封装编辑器，持有当前文件与光标状态。实现同时是桥接消息处理器。 */
+interface EditorEngine : BridgeHandler {
     /** 绑定 WebView 端口、语言配置与主题（生命周期内一次）。 */
     fun bind(port: WebViewPort, language: LanguageProfile, theme: EditorTheme)
 
@@ -26,8 +26,8 @@ interface EditorEngine {
     fun release()
 }
 
-/** ② 渲染引擎：把三文件拼成预览页并注入 WebView。 */
-interface RenderEngine {
+/** ② 渲染引擎：把三文件拼成预览页并注入 WebView。实现同时是桥接消息处理器。 */
+interface RenderEngine : BridgeHandler {
     fun bind(port: WebViewPort)
     fun render(document: PreviewDocument)
     fun reload()
