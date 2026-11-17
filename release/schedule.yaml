@@ -1,0 +1,14 @@
+# MiniMe-IDE 发版排班表
+# ⚠ 仅 owner（Lisir2002）可修改本文件。正式版发布前，此处必须有 status=approved 的记录。
+# 测试版（x.y.z-rcN）不受本表约束，可自由发布。
+#
+# 授权正式版示例（取消注释并按实际填写）：
+# releases:
+#   - version: "1.0.0"
+#     status: approved          # requested | approved | released | blocked
+#     scheduledBy: "Lisir2002"
+#     window: "2026-12-01"      # 进入该日期或之后方可发布
+#     sourceRc: "1.0.0-rc3"     # 从哪个测试版晋级
+#     note: "首个正式版"
+
+releases: []
