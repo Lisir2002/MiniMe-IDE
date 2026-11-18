@@ -36,6 +36,9 @@ import com.mini.ide.language.api.LanguageId
 import com.mini.ide.language.api.LanguageProvider
 import com.mini.ide.language.api.LanguageProfile
 import com.mini.ide.language.api.Snippet
+import com.mini.ide.language.api.CompileResult
+import com.mini.ide.language.api.CompileDiagnostic
+import com.mini.ide.language.api.DslCompiler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -320,4 +323,17 @@ class FakeDiagnosticEngine(
             is RenderEvent.Completed -> 0
         },
     )
+}
+
+/** 可编程自研语言编译器 Fake（M6），供 ProjectEngineImpl DSL 分支单测。 */
+class FakeDslCompiler(
+    var result: CompileResult = CompileResult("<html></html>", "", "", emptyList()),
+    var profileToReturn: LanguageProfile = FakeLanguageProfile,
+) : DslCompiler {
+    val compiled = mutableListOf<String>()
+    override fun compile(source: String): CompileResult {
+        compiled += source
+        return result
+    }
+    override fun profile(): LanguageProfile = profileToReturn
 }

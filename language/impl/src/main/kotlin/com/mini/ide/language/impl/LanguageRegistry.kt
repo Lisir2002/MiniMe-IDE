@@ -4,6 +4,7 @@ import com.mini.ide.core.model.FileKind
 import com.mini.ide.language.api.LanguageId
 import com.mini.ide.language.api.LanguageProvider
 import com.mini.ide.language.api.LanguageProfile
+import com.mini.ide.language.dsl.DslProfile
 
 /**
  * 语言注册表：可插拔核心。
@@ -18,6 +19,7 @@ class LanguageRegistry : LanguageProvider {
         register(HtmlProfile)
         register(CssProfile)
         register(JsProfile)
+        register(DslProfile) // M6：自研语言注册，编辑器内核零改动即获得 MiniLang 配置
     }
 
     fun register(profile: LanguageProfile) {

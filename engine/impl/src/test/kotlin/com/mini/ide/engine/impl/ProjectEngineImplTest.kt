@@ -10,6 +10,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import com.mini.ide.language.api.CompileDiagnostic
+import com.mini.ide.language.api.CompileResult
+import com.mini.ide.language.api.CompileSeverity
+import com.mini.ide.testdouble.FakeDslCompiler
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -115,6 +119,75 @@ class ProjectEngineImplTest {
             FakeProjectRepository(), FakeFileRepository(), dispatcher,
         )
         assertEquals(null, engine.currentPreviewDocument("base"))
+        engine.close()
+    }
+
+    @Test
+    fun `M6含DSL文件时优先使用编译产物预览`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val dslFiles = listOf(
+            SourceFile("f-html", "p1", "index.html", FileKind.HTML, "<h1>手写</h1>"),
+            SourceFile("f-dsl", "p1", "main.dsl", FileKind.DSL, "页面 \"编译\""),
+        )
+        val compiler = FakeDslCompiler(
+            CompileResult("<!DOCTYPE html><html><head></head><body><h1>编译产物</h1></body></html>", "body{}", "", emptyList())
+        )
+        val engine = ProjectEngineImpl(
+            FakeProjectRepository(listOf(Project("p1", "Demo"))),
+            FakeFileRepository(dslFiles),
+            dispatcher,
+            dslCompiler = compiler,
+        )
+        engine.open("p1")
+        advanceUntilIdle()
+        val doc = engine.currentPreviewDocument("http://preview/")!!
+        assertTrue(doc.html.contains("编译产物"))
+        assertTrue(!doc.html.contains("手写"))
+        assertEquals(1, compiler.compiled.size)
+        assertEquals("页面 \"编译\"", compiler.compiled[0])
+        engine.close()
+    }
+
+    @Test
+    fun `M6无DSL文件时维持三文件逻辑且编译器不被调用`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val compiler = FakeDslCompiler()
+        val engine = ProjectEngineImpl(
+            FakeProjectRepository(listOf(Project("p1", "Demo"))),
+            FakeFileRepository(sampleFiles()),
+            dispatcher,
+            dslCompiler = compiler,
+        )
+        engine.open("p1")
+        advanceUntilIdle()
+        val doc = engine.currentPreviewDocument("http://preview/")!!
+        assertTrue(doc.html.contains("<h1>hi</h1>"))
+        assertTrue(compiler.compiled.isEmpty())
+        engine.close()
+    }
+
+    @Test
+    fun `M6编译错误诊断透传到预览JS`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val dslFiles = listOf(SourceFile("f-dsl", "p1", "main.dsl", FileKind.DSL, "???"))
+        val compiler = FakeDslCompiler(
+            CompileResult(
+                "<html><head></head><body></body></html>", "", "",
+                listOf(CompileDiagnostic(2, "无法识别", CompileSeverity.ERROR)),
+            )
+        )
+        val engine = ProjectEngineImpl(
+            FakeProjectRepository(listOf(Project("p1", "Demo"))),
+            FakeFileRepository(dslFiles),
+            dispatcher,
+            dslCompiler = compiler,
+        )
+        engine.open("p1")
+        advanceUntilIdle()
+        val doc = engine.currentPreviewDocument("http://preview/")!!
+        assertTrue(doc.js.contains("console.error"))
+        assertTrue(doc.js.contains("第2行"))
+        assertTrue(doc.js.contains("无法识别"))
         engine.close()
     }
 }

@@ -16,12 +16,22 @@ import org.junit.Test
 class LanguageRegistryTest {
 
     @Test
-    fun `内置注册HTML_CSS_JS三套Profile`() {
+    fun `内置注册HTML_CSS_JS_DSL四套Profile`() {
         val registry = LanguageRegistry()
-        assertEquals(3, registry.all().size)
+        assertEquals(4, registry.all().size)
         assertEquals("text/html", registry.get(LanguageId.HTML).codemirrorMode)
         assertEquals("text/css", registry.get(LanguageId.CSS).codemirrorMode)
         assertEquals("text/javascript", registry.get(LanguageId.JS).codemirrorMode)
+    }
+
+    @Test
+    fun `M6内置MiniLang档案与forKind映射`() {
+        val registry = LanguageRegistry()
+        val dsl = registry.get(LanguageId.DSL)
+        assertEquals("MiniLang", dsl.displayName)
+        assertEquals(LanguageId.DSL, registry.forExtension("dsl")!!.id)
+        assertEquals(LanguageId.DSL, registry.forKind(com.mini.ide.core.model.FileKind.DSL).id)
+        assertTrue(dsl.highlight.keywords.contains("页面"))
     }
 
     @Test

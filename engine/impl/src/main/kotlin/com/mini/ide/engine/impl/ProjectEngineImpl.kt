@@ -8,6 +8,8 @@ import com.mini.ide.data.api.ProjectRepository
 import com.mini.ide.engine.api.PreviewDocument
 import com.mini.ide.engine.api.ProjectEngine
 import com.mini.ide.engine.api.ProjectState
+import com.mini.ide.language.api.CompileSeverity
+import com.mini.ide.language.api.DslCompiler
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +35,8 @@ class ProjectEngineImpl(
     private val projectRepo: ProjectRepository,
     private val fileRepo: FileRepository,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    /** M6：自研语言编译器。默认 null 用于兼容 M2 既有构造（无 DSL 项目走原三文件逻辑）。 */
+    private val dslCompiler: DslCompiler? = null,
 ) : ProjectEngine {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -90,6 +94,27 @@ class ProjectEngineImpl(
         val files = _files.value
         if (files.isEmpty()) return null
         fun contentOf(kind: FileKind) = files.firstOrNull { it.kind == kind }?.content.orEmpty()
+
+        // M6：项目含 DSL 文件时，以编译器产物为预览源；否则维持原三文件逻辑。
+        val dslFile = files.firstOrNull { it.kind == FileKind.DSL }
+        if (dslFile != null && dslCompiler != null) {
+            val compiled = dslCompiler.compile(dslFile.content)
+            // 编译诊断经 console 通道透传，复用 M5 诊断卡片（错误/警告级才输出）
+            val diagnosticJs = compiled.diagnostics
+                .filter { it.severity != CompileSeverity.WARNING || it.message.contains("不存在") }
+                .joinToString("\n") { d ->
+                    val level = if (d.severity == CompileSeverity.ERROR) "error" else "warn"
+                    val msg = "第${d.line}行 · ${d.message}".replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ")
+                    "console.$level(\"$msg\");"
+                }
+            val jsWithDiagnostics = if (diagnosticJs.isBlank()) compiled.js else compiled.js + "\n" + diagnosticJs
+            return PreviewDocumentBuilder.build(
+                html = compiled.html,
+                css = compiled.css,
+                js = jsWithDiagnostics,
+                baseUrl = baseUrl,
+            )
+        }
         return PreviewDocumentBuilder.build(
             html = contentOf(FileKind.HTML),
             css = contentOf(FileKind.CSS),

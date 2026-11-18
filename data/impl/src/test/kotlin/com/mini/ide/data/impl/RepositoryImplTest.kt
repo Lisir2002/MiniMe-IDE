@@ -47,12 +47,13 @@ class RepositoryImplTest {
     @Test
     fun `内置模板注入幂等且包含空白与示例`() = runBlocking {
         val all = templates.all()
-        assertEquals(2, all.size)
+        assertEquals(3, all.size)
         assertTrue(all.any { it.id == "blank" })
         assertTrue(all.any { it.id == "hello" })
+        assertTrue(all.any { it.id == "minilang" })
         // 再次 seed 不应重复
         templates.ensureSeeded()
-        assertEquals(2, templates.all().size)
+        assertEquals(3, templates.all().size)
     }
 
     @Test

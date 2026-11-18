@@ -11,6 +11,7 @@ import com.mini.ide.engine.api.EditorEngine
 import com.mini.ide.engine.api.LessonEngine
 import com.mini.ide.engine.api.ProjectEngine
 import com.mini.ide.engine.api.RenderEngine
+import com.mini.ide.language.api.DslCompiler
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -45,7 +46,8 @@ object EngineModule {
     fun provideProjectEngine(
         projectRepo: ProjectRepository,
         fileRepo: FileRepository,
-    ): ProjectEngine = ProjectEngineImpl(projectRepo, fileRepo)
+        dslCompiler: DslCompiler,
+    ): ProjectEngine = ProjectEngineImpl(projectRepo, fileRepo, dslCompiler = dslCompiler)
 
     /** M5 教学引擎。 */
     @Provides
