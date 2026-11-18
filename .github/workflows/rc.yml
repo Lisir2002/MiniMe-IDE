@@ -1,30 +1,62 @@
 name: RC Build
 
-# 测试版 x.y.z-rcN：tag 触发，自由发布，无排班门禁。
-# 全量测试与构建在云端执行（本地不做）。
+# 测试版 x.y.z-rcN：workflow_dispatch 手动触发，云端全量构建 + 打 tag + 发版页面，无排班门禁。
+# 全量测试、R8 出包、打 tag、发版页面全部在云端完成（本地只做单测）。
+# 注意：不再监听 tag push，避免「云端打 tag → 再次触发本流」递归。
 on:
-  push:
-    tags:
-      - "v*-rc*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '目标测试版 x.y.z-rcN（如 1.0.0-rc1）'
+        required: true
+        default: '1.0.0-rc1'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rc-${{ inputs.version }}
+  cancel-in-progress: false
 
 jobs:
   build-rc:
-    name: 测试版全量构建
+    name: 测试版全量构建与发版
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 结构化日志 - 开始
-        run: echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [ci      ] RC 构建开始 tag=${{ github.ref_name }}"
+        run: echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [ci      ] RC 发版开始 version=${{ inputs.version }}"
+
+      - name: 校验版本格式（x.y.z-rcN）
+        run: |
+          V="${{ inputs.version }}"
+          if ! echo "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$'; then
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [ERROR  ] [ci      ] 版本号格式非法 version=$V"
+            exit 1
+          fi
+
+      - name: 校验版本真源与输入一致
+        run: |
+          set -a; . ./version.properties; set +a
+          EXPECTED="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-rc${RC_NUMBER}"
+          V="${{ inputs.version }}"
+          if [ "$EXPECTED" != "$V" ]; then
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [ERROR  ] [ci      ] 版本真源与输入不一致 expected=$EXPECTED input=$V"
+            exit 1
+          fi
+          echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [ci      ] 版本真源一致 version=$V"
 
       - name: 校验 CHANGELOG 含该版本
         run: |
-          V="${{ github.ref_name }}"
-          V="${V#v}"
-          if grep -q "\[$V\]" CHANGELOG.md; then
-            echo "[INFO   ] [ci      ] CHANGELOG 含版本条目 version=$V"
+          V="${{ inputs.version }}"
+          if grep -qF "[$V] - " CHANGELOG.md; then
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [ci      ] CHANGELOG 含版本条目 version=$V"
           else
-            echo "[ERROR  ] [ci      ] CHANGELOG 缺少版本条目 version=$V"
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [ERROR  ] [ci      ] CHANGELOG 缺少版本条目 version=$V"
             exit 1
           fi
 
@@ -47,15 +79,62 @@ jobs:
       - name: 架构铁律校验
         run: ./gradlew checkModuleRules --no-daemon
 
-      - name: 构建 RC 产物
-        run: ./gradlew assembleDebug --no-daemon
+      - name: 构建 RC 产物（release buildType + R8 混淆 + rc 版本号）
+        run: ./gradlew assembleRelease --no-daemon -PreleaseVersion="${{ inputs.version }}"
 
-      - name: 上传 RC 产物
+      - name: 校验 R8 产物存在
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK" ]; then
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [ERROR  ] [build   ] R8 产物缺失 path=$APK"
+            exit 1
+          fi
+          echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [build   ] R8 产物就绪 size=$(du -h "$APK" | cut -f1)"
+
+      - name: 生成发版说明（从 CHANGELOG 提取该版本段）
+        run: |
+          V="${{ inputs.version }}"
+          awk -v v="$V" '
+            /^## / {
+              if (flag) exit
+              if (index($0, "[" v "] - ") > 0) { flag=1; next }
+            }
+            flag { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [WARN   ] [ci      ] 发版说明为空，使用默认 version=$V"
+            echo "MiniMe-IDE $V 测试版构建（R8 混淆）。" > release_notes.md
+          fi
+
+      - name: 创建并推送 tag
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          V="${{ inputs.version }}"
+          if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [WARN   ] [ci      ] tag 已存在，跳过创建 tag=v$V"
+          else
+            git tag -a "v$V" -m "release: MiniMe-IDE $V"
+            git push origin "v$V"
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [ci      ] tag 已推送 tag=v$V"
+          fi
+
+      - name: 创建发版页面（GitHub Release）
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: MiniMe-IDE ${{ inputs.version }}
+          body_path: release_notes.md
+          prerelease: true
+          files: app/build/outputs/apk/release/app-release.apk
+          fail_on_unmatched_files: true
+
+      - name: 上传 RC 产物（备份）
         uses: actions/upload-artifact@v4
         with:
-          name: minimide-rc-${{ github.ref_name }}
-          path: app/build/outputs/apk/debug/*.apk
+          name: minimide-rc-${{ inputs.version }}
+          path: app/build/outputs/apk/release/*.apk
 
       - name: 结构化日志 - 完成
         if: success()
-        run: echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [ci      ] RC 构建完成 tag=${{ github.ref_name }}"
+        run: echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [ci      ] RC 发版完成 version=${{ inputs.version }}"

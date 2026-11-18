@@ -39,7 +39,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8：代码混淆 + 资源压缩，测试版/正式版共用 release buildType，均开混淆。
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
