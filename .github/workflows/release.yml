@@ -45,6 +45,8 @@ jobs:
 
       - name: 设置 Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: 授予 gradlew 执行权限
         run: chmod +x gradlew
