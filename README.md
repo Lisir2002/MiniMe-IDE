@@ -12,12 +12,14 @@
 | --- | --- |
 | 应用名称 | MiniMe-IDE |
 | 包名 / applicationId | `com.mini.ide` |
-| 当前阶段 | **M5 教学增强**（S6 教学系统激活 + 错误提示结构化，Phase2） |
+| 当前阶段 | **M6 自研语言**（S5 Phase3 MiniLang + 编译器 + S7 扩展点最小激活） |
 | 最低系统 | Android 12（API 31） |
 
 > **M4 已打通核心闭环**：项目列表 → 新建/打开 → HTML/CSS/JS 三文件编辑 → 300ms 防抖即时预览 → 自动/手动保存 → 控制台日志。编辑器为离线自实现内核（透明 textarea + 语法高亮镜像），完整实现 Bridge 协议，未来可无缝替换为 CodeMirror 6（Kotlin 引擎层零改动）。
 >
 > **M5 叠加教学能力**：工作区顶栏教程入口 → 2 节内置课程（分步任务 + 数据驱动校验 + 提示卡片 + 进度跟踪）；预览报错升级为结构化诊断（分类标签 + 中文教学建议 + 来源行号 + 分类过滤）。
+>
+> **M6 兑现自研语言**：新增面向小白的中文 DSL **MiniLang**（`页面/文字/按钮/卡片/当点击`）与独立编译器（`:language:dsl`：词法 → 语法 → AST → 代码生成 → HTML/CSS/JS），注册进语言注册表——**编辑器内核零改动**即获得 MiniLang 高亮与补全。编译产物复用 M4 预览链路，编译诊断经 console 通道复用 M5 诊断卡片。内置「MiniLang 入门」模板，一键创建会响应的中文网页。S7 扩展系统最小激活（ExtensionRegistry）。
 
 ---
 
@@ -30,7 +32,7 @@
 ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-daemon
 ```
 
-> 当前 115 个 JVM 单测覆盖数据层、引擎层、语言层、四个 feature 的 ViewModel、桥接协议与教学诊断。
+> 当前 149 个 JVM 单测覆盖数据层、引擎层、语言层（含 MiniLang 编译器）、四个 feature 的 ViewModel、桥接协议、教学诊断、扩展注册表与 DSL 预览接入。
 
 > ⚠️ **全量测试与发行构建（assemble / release）不在本地执行，一律由 GitHub Actions 云端完成。**
 
@@ -52,7 +54,7 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 
 ## 模块地图
 
-17 个 Gradle 模块，按 8 大系统分层。依赖方向单向向下，架构铁律由 `checkModuleRules` 编译期强制。
+18 个 Gradle 模块，按 8 大系统分层。依赖方向单向向下，架构铁律由 `checkModuleRules` 编译期强制。
 
 ```
 :app                              应用壳 / Hilt 装配层（唯一可依赖所有 impl）
@@ -62,10 +64,10 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 :core:uicommon                    自绘组件库：玻璃/按钮/卡片/顶栏/标签栏/SVG 图标/动效
 :data:api / :data:impl  (S3)      数据系统：Repository / Room / ContentStore
 :engine:api / :engine:impl  (S4)  核心引擎：Editor / Render / Bridge / Project / Lesson / Diagnostic
-:language:api / :language:impl (S5) 语言与语法：可插拔 LanguageProfile / LanguageProvider
+:language:api / :language:dsl / :language:impl (S5) 语言与语法：可插拔 LanguageProfile / MiniLang 编译器 / LanguageProvider / 注册表
 :feature:project / editor / preview  MVP 功能模块（只依赖 api；editor/preview 含 WebView 适配与 assets）
 :feature:lesson     (S6)          教学系统（M5 已激活：课程列表/分步校验/进度/提示）
-:extension:api      (S7)          扩展点契约（仅接口，只留口不设计）
+:extension:api      (S7)         扩展点（M6 最小激活：ExtensionRegistry；Share/Collab 仍仅契约）
 :testdouble                       Fake 实现（测试 / 预览替换）
 ```
 
@@ -78,6 +80,7 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 
 ## 版本与发版
 
+- **阶段→版本**：当前 M0–M6 均属开发期（`0.1.0-rc*`）；M6 完成 Phase3 自研语言后，按工程蓝图下一目标版本为 `2.0.0`（major 跃迁），仍须开发方申请 + owner 排班批准后才发正式版。
 - **版本真源**：`version.properties`（`x.y.z` + `RC_NUMBER`）；versionCode 存于 `release/versioncode.txt`，单调递增。
 - **测试版** `x.y.z-rcN`：推送 tag `v*-rc*` 触发 `rc.yml`，自由发布。
 - **正式版** `x.y.z`：手动触发 `release.yml`，**必须先通过排班门禁**。
@@ -117,4 +120,4 @@ python3 scripts/check_schedule.py --version 1.0.0 --schedule release/schedule.ya
 
 ---
 
-*MiniMe-IDE · 教学型离线前端 IDE · M5 教学增强阶段（Phase2）*
+*MiniMe-IDE · 教学型离线前端 IDE · M6 自研语言阶段（Phase3）*

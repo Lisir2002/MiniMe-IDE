@@ -7,6 +7,16 @@
 ## [Unreleased]
 
 ### Added
+- M6 自研语言（Phase3）：面向小白的中文 DSL MiniLang + 独立编译器 + S7 扩展点最小激活（`0d2e1b8` 之后）
+  - `:language:api`：新增 `DslCompiler` 契约 + `CompileResult` / `CompileDiagnostic` / `CompileSeverity`（纯 JVM，向后兼容新增）
+  - `:language:dsl`（新模块）：MiniLang 编译器——`DslLexer`（逐行词法 + 转义/注释/行号）→ `DslParser`（递归下降 + 错误不中断 + 深度上限保护）→ `DslAst` → `DslCodeGenerator`（HTML 转义/颜色词表/事件绑定）→ `DslCompilerImpl`；`DslProfile` 提供中文关键字高亮/补全/片段
+  - 语法闭集：`页面 / 文字 / 标题 / 按钮 / 卡片 {} / 当点击…显示 / 设置 背景`，`#` 注释；颜色词表 + `#RRGGBB` 透传
+  - `:language:impl`：注册 `DslProfile`，`forKind(DSL)` 由回退 HTML 改为返回真实档案——编辑器内核零改动即获 MiniLang 配置（可插拔契约兑现）
+  - `:engine:impl`：`ProjectEngineImpl` 增加 DSL 编译分支（DSL 优先），编译诊断经 console 通道透传复用 M5 诊断卡片；默认参数保持 M2 构造兼容
+  - `:data:impl`：内置「MiniLang 入门」模板（单 `main.dsl`，幂等 seed）
+  - `:extension:api`：落地 `ExtensionRegistry`（register / all&lt;reified&gt;），`LanguageProvider` 建模为扩展点；Share/Collab 仍仅契约
+  - `:testdouble`：`FakeDslCompiler`；Hilt `DslModule` 绑定编译器实现
+  - M6 本地单测：Lexer / Parser / CodeGenerator / CompilerImpl / DslProfile / DSL 预览接入 / ExtensionRegistry（共 34 用例）；全量 149 用例 0 失败，18 模块铁律通过
 - M5 教学增强（Phase2）：S6 教学系统激活 + 错误提示结构化（`9152fa8` 之后）
   - `:core:model`：Lesson / LessonStep / ValidatorSpec / LessonTarget / CheckContext / StepResult / LessonProgress / LessonState 领域模型；Settings 新增 `lessonEnabled` 开关
   - `:data:impl`：Room 升级 v2，新增 lessons / lesson_progress 两张表 + LessonDao + LessonRepositoryImpl + 2 节内置课程（第一个网页 / 给文字上色），幂等 seed
@@ -39,6 +49,8 @@
 - 工程规范体系：提交 / 发版说明 / 日志 / 文档规范
 
 ### Changed
+- 契约版本 v1.2：新增 `DslCompiler` / `CompileResult` / `CompileDiagnostic`；`DslProfile` 注册进 LanguageRegistry，模块数 17 → 18（M6）
+- `LanguageRegistry.forKind(FileKind.DSL)` 由回退 HTML 改为返回真实 MiniLang 档案（M6）
 - Lesson.target 用纯数据 LessonTarget 替代蓝图里的 engine:api.PreviewDocument，避免 core:model 反向依赖（M5 设计决策 1）
 - PreviewLog 升级为结构化诊断（新增 category/title/suggestion 字段，均带默认值向后兼容）
 - EditorEngine / RenderEngine 接口继承 BridgeHandler，app 层统一装配 Fanout 桥接处理器
