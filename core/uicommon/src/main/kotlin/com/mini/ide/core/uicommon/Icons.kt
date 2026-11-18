@@ -130,4 +130,58 @@ object Icons {
 
     val FileCss = FileHtml
     val FileJs = FileHtml
+
+    /** M5 教学语义图标。 */
+
+    /** 学士帽：教程入口。 */
+    val GraduationCap: ImageVector = builder("ic_graduation_cap").apply {
+        pathStroke { moveTo(2f, 9f); lineTo(12f, 5f); lineTo(22f, 9f); lineTo(12f, 13f); close() }
+        pathStroke { moveTo(6f, 11f); lineTo(6f, 16f); curveTo(9f, 19f, 15f, 19f, 18f, 16f); lineTo(18f, 11f) }
+        pathStroke { moveTo(22f, 9f); lineTo(22f, 15f) }
+    }.build()
+
+    /** 灯泡：提示卡片。 */
+    val Lightbulb: ImageVector = builder("ic_lightbulb").apply {
+        pathStroke {
+            moveTo(9f, 18f); lineTo(15f, 18f)
+            moveTo(10f, 21f); lineTo(14f, 21f)
+        }
+        pathStroke {
+            moveTo(12f, 3f)
+            curveTo(7.5f, 3f, 5f, 6.5f, 5f, 10f)
+            curveTo(5f, 13f, 7f, 14.5f, 8f, 17f)
+            lineTo(16f, 17f)
+            curveTo(17f, 14.5f, 19f, 13f, 19f, 10f)
+            curveTo(19f, 6.5f, 16.5f, 3f, 12f, 3f)
+            close()
+        }
+    }.build()
+
+    /** 勾选圆：通过/完成。 */
+    val CheckCircle: ImageVector = builder("ic_check_circle").apply {
+        pathStroke { moveTo(8f, 12f); lineTo(11f, 15f); lineTo(16f, 9f) }
+        pathStroke {
+            moveTo(12f, 3f)
+            curveTo(7f, 3f, 3f, 7f, 3f, 12f)
+            curveTo(3f, 17f, 7f, 21f, 12f, 21f)
+            curveTo(17f, 21f, 21f, 17f, 21f, 12f)
+            curveTo(21f, 7f, 17f, 3f, 12f, 3f)
+            close()
+        }
+    }.build()
+
+    /** 书本：课程详情。 */
+    val Book: ImageVector = builder("ic_book").apply {
+        pathStroke {
+            moveTo(12f, 6f)
+            curveTo(9.5f, 4.5f, 6f, 4.5f, 3f, 5.5f)
+            lineTo(3f, 18.5f)
+            curveTo(6f, 17.5f, 9.5f, 17.5f, 12f, 19f)
+            curveTo(14.5f, 17.5f, 18f, 17.5f, 21f, 18.5f)
+            lineTo(21f, 5.5f)
+            curveTo(18f, 4.5f, 14.5f, 4.5f, 12f, 6f)
+            close()
+        }
+        pathStroke { moveTo(12f, 6f); lineTo(12f, 19f) }
+    }.build()
 }

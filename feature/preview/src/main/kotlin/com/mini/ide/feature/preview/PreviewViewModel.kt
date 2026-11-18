@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.mini.ide.core.common.DispatcherProvider
 import com.mini.ide.data.api.SettingsRepository
 import com.mini.ide.engine.api.BridgeMessage
+import com.mini.ide.engine.api.DiagnosticCategory
+import com.mini.ide.engine.api.DiagnosticEngine
 import com.mini.ide.engine.api.LogLevel
+import com.mini.ide.engine.api.PreviewDocument
 import com.mini.ide.engine.api.ProjectEngine
 import com.mini.ide.engine.api.RenderEngine
 import com.mini.ide.engine.api.RenderEvent
@@ -23,18 +26,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** 一条预览日志。 */
+/** 一条预览日志（M5 升级为结构化诊断，字段带默认值向后兼容）。 */
 data class PreviewLog(
     val level: LogLevel,
     val message: String,
     val source: String = "",
     val line: Int = 0,
+    val category: DiagnosticCategory = DiagnosticCategory.UNKNOWN,
+    val title: String = "",
+    val suggestion: String? = null,
 )
+
+/** 日志分类过滤。 */
+enum class LogFilter { ALL, ERRORS, WARNINGS }
 
 /** 预览区 UI 状态。 */
 data class PreviewUiState(
     val logs: List<PreviewLog> = emptyList(),
     val lastRenderMs: Long = 0,
+    val filter: LogFilter = LogFilter.ALL,
+    val hasNewError: Boolean = false,
 )
 
 /**
@@ -48,6 +59,7 @@ class PreviewViewModel @Inject constructor(
     private val projectEngine: ProjectEngine,
     private val renderEngine: RenderEngine,
     private val settingsRepo: SettingsRepository,
+    private val diagnosticEngine: DiagnosticEngine,
     private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
 
@@ -55,14 +67,27 @@ class PreviewViewModel @Inject constructor(
     val uiState: StateFlow<PreviewUiState> = _uiState.asStateFlow()
 
     private val baseUrl = "file:///android_asset/preview/"
+    private var currentDoc: PreviewDocument? = null
 
     init {
-        // 聚合 RenderEngine 事件（含 Completed 计时）
+        // 聚合 RenderEngine 事件（含 Completed 计时），经诊断引擎升级为结构化信息
         viewModelScope.launch(dispatchers.main) {
             renderEngine.events.collect { event ->
                 when (event) {
-                    is RenderEvent.Console -> appendLog(PreviewLog(event.level, event.message, line = event.line))
-                    is RenderEvent.RuntimeError -> appendLog(PreviewLog(LogLevel.ERROR, event.message, event.source, event.line))
+                    is RenderEvent.Console, is RenderEvent.RuntimeError -> {
+                        val diagnostic = diagnosticEngine.diagnose(event, currentDoc)
+                        appendLog(
+                            PreviewLog(
+                                level = diagnostic.severity,
+                                message = diagnostic.detail,
+                                source = diagnostic.source,
+                                line = diagnostic.line,
+                                category = diagnostic.category,
+                                title = diagnostic.title,
+                                suggestion = diagnostic.suggestion,
+                            )
+                        )
+                    }
                     is RenderEvent.Completed -> _uiState.update { it.copy(lastRenderMs = event.durationMs) }
                 }
             }
@@ -91,12 +116,30 @@ class PreviewViewModel @Inject constructor(
 
     private fun renderOnce() {
         val document = projectEngine.currentPreviewDocument(baseUrl) ?: return
+        currentDoc = document
         renderEngine.render(PreviewBridgeScript.wrap(document))
     }
 
     private fun appendLog(log: PreviewLog) {
-        _uiState.update { it.copy(logs = (it.logs + log).takeLast(50)) }
+        _uiState.update {
+            it.copy(
+                logs = (it.logs + log).takeLast(50),
+                hasNewError = it.hasNewError || log.level == LogLevel.ERROR,
+            )
+        }
     }
 
-    fun clearLogs() = _uiState.update { it.copy(logs = emptyList()) }
+    fun clearLogs() = _uiState.update { it.copy(logs = emptyList(), hasNewError = false) }
+
+    fun setFilter(filter: LogFilter) = _uiState.update { it.copy(filter = filter) }
+
+    /** UI 展开日志面板后消费"新错误"提示。 */
+    fun consumeNewError() = _uiState.update { it.copy(hasNewError = false) }
+
+    /** 按当前过滤条件返回日志。 */
+    fun filteredLogs(state: PreviewUiState): List<PreviewLog> = when (state.filter) {
+        LogFilter.ALL -> state.logs
+        LogFilter.ERRORS -> state.logs.filter { it.level == LogLevel.ERROR }
+        LogFilter.WARNINGS -> state.logs.filter { it.level == LogLevel.WARN }
+    }
 }
