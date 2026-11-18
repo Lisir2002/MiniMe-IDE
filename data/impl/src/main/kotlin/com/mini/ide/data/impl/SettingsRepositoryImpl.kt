@@ -37,6 +37,7 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         previewDebounceMs = prefs.getLong(KEY_PREVIEW_DEBOUNCE, 300L),
         autoSave = prefs.getBoolean(KEY_AUTOSAVE, true),
         sandboxMode = prefs.getBoolean(KEY_SANDBOX, true),
+        lessonEnabled = prefs.getBoolean(KEY_LESSON_ENABLED, false),
     )
 
     private fun persist(s: Settings) {
@@ -47,6 +48,7 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
             putLong(KEY_PREVIEW_DEBOUNCE, s.previewDebounceMs)
             putBoolean(KEY_AUTOSAVE, s.autoSave)
             putBoolean(KEY_SANDBOX, s.sandboxMode)
+            putBoolean(KEY_LESSON_ENABLED, s.lessonEnabled)
             apply()
         }
     }
@@ -58,5 +60,6 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         const val KEY_PREVIEW_DEBOUNCE = "preview_debounce"
         const val KEY_AUTOSAVE = "autosave"
         const val KEY_SANDBOX = "sandbox"
+        const val KEY_LESSON_ENABLED = "lesson_enabled"
     }
 }

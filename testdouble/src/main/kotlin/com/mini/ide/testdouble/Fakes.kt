@@ -9,11 +9,19 @@ import com.mini.ide.data.api.ProjectRepository
 import com.mini.ide.data.api.SettingsRepository
 import com.mini.ide.data.api.TemplateRepository
 import com.mini.ide.core.model.FileKind
+import com.mini.ide.core.model.Lesson
+import com.mini.ide.core.model.LessonProgress
+import com.mini.ide.core.model.LessonState
+import com.mini.ide.core.model.StepResult
+import com.mini.ide.data.api.LessonRepository
 import com.mini.ide.engine.api.BridgeEngine
 import com.mini.ide.engine.api.BridgeHandler
 import com.mini.ide.engine.api.BridgeMethod
+import com.mini.ide.engine.api.Diagnostic
+import com.mini.ide.engine.api.DiagnosticEngine
 import com.mini.ide.engine.api.EditorEngine
 import com.mini.ide.engine.api.EditorEvent
+import com.mini.ide.engine.api.LessonEngine
 import com.mini.ide.engine.api.ProjectEngine
 import com.mini.ide.engine.api.ProjectState
 import com.mini.ide.engine.api.RenderEngine
@@ -33,6 +41,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 
 /** 记录所有 JS 调用与加载数据的 WebView 端口，供引擎单测断言。 */
 class FakeWebViewPort : WebViewPort {
@@ -239,4 +248,76 @@ class FakeLanguageProvider : LanguageProvider {
     override fun forKind(kind: FileKind): LanguageProfile =
         profiles[kind] ?: FakeLanguageProfile
     override fun all(): List<LanguageProfile> = profiles.values.distinct()
+}
+
+/** 内存教学仓库 Fake（M5），供 LessonEngine / LessonViewModel 单测。 */
+class FakeLessonRepository(initial: List<Lesson> = emptyList()) : LessonRepository {
+    private val lessons = MutableStateFlow(initial)
+    private val progressMap = MutableStateFlow<Map<String, LessonProgress>>(emptyMap())
+    override fun observeAll(): Flow<List<Lesson>> = lessons
+    override suspend fun all(): List<Lesson> = lessons.value
+    override suspend fun get(id: String): Lesson? = lessons.value.firstOrNull { it.id == id }
+    override suspend fun ensureSeeded() = Unit
+    fun setLessons(value: List<Lesson>) { lessons.value = value }
+    override fun observeProgress(lessonId: String): Flow<LessonProgress?> =
+        progressMap.map { it[lessonId] }
+    override suspend fun getProgress(lessonId: String): LessonProgress? = progressMap.value[lessonId]
+    override suspend fun saveProgress(progress: LessonProgress) {
+        progressMap.value = progressMap.value + (progress.lessonId to progress)
+    }
+}
+
+/** 可编程教学引擎 Fake（M5），供 LessonViewModel 单测。 */
+class FakeLessonEngine : LessonEngine {
+    var lessons: List<Lesson> = emptyList()
+    var state: LessonState? = null
+    var stepResult: StepResult = StepResult(true, "正确！")
+    val advanced = mutableListOf<String>()
+    var resetCount = 0
+    private val _lessonsFlow = MutableStateFlow<List<Lesson>>(emptyList())
+    private val _stateFlow = MutableStateFlow<LessonState?>(null)
+
+    fun pushLessons(value: List<Lesson>) { lessons = value; _lessonsFlow.value = value }
+    fun pushState(value: LessonState?) { state = value; _stateFlow.value = value }
+
+    override fun observeLessons(): Flow<List<Lesson>> = _lessonsFlow
+    override fun load(lessonId: String): Flow<LessonState> = _stateFlow.filterNotNull()
+    override suspend fun checkStep(lessonId: String, stepId: String, files: List<SourceFile>) = stepResult
+    override suspend fun advance(lessonId: String) { advanced += lessonId }
+    override suspend fun reset(lessonId: String) { resetCount++ }
+    override suspend fun ensureSeeded() = Unit
+}
+
+/** 固定分类的诊断引擎 Fake，供 PreviewViewModel 单测。 */
+class FakeDiagnosticEngine(
+    private val category: com.mini.ide.engine.api.DiagnosticCategory = com.mini.ide.engine.api.DiagnosticCategory.RUNTIME,
+    private val suggestion: String? = "测试建议",
+) : DiagnosticEngine {
+    override fun diagnose(
+        event: RenderEvent,
+        currentDoc: PreviewDocument?,
+    ): Diagnostic = Diagnostic(
+        category = category,
+        severity = when (event) {
+            is RenderEvent.RuntimeError -> com.mini.ide.engine.api.LogLevel.ERROR
+            is RenderEvent.Console -> event.level
+            is RenderEvent.Completed -> com.mini.ide.engine.api.LogLevel.LOG
+        },
+        title = "测试诊断",
+        detail = when (event) {
+            is RenderEvent.RuntimeError -> event.message
+            is RenderEvent.Console -> event.message
+            is RenderEvent.Completed -> "完成"
+        },
+        suggestion = suggestion,
+        source = when (event) {
+            is RenderEvent.RuntimeError -> event.source
+            else -> ""
+        },
+        line = when (event) {
+            is RenderEvent.RuntimeError -> event.line
+            is RenderEvent.Console -> event.line
+            is RenderEvent.Completed -> 0
+        },
+    )
 }

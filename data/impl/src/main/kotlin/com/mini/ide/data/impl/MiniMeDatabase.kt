@@ -6,14 +6,18 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ProjectEntity::class, SourceFileEntity::class, TemplateEntity::class],
-    version = 1,
+    entities = [
+        ProjectEntity::class, SourceFileEntity::class, TemplateEntity::class,
+        LessonEntity::class, LessonProgressEntity::class,
+    ],
+    version = 2,
     exportSchema = true,
 )
 abstract class MiniMeDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
     abstract fun fileDao(): FileDao
     abstract fun templateDao(): TemplateDao
+    abstract fun lessonDao(): LessonDao
 
     companion object {
         const val DATABASE_NAME = "minime.db"

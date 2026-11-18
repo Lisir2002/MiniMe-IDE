@@ -2,6 +2,7 @@ package com.mini.ide.data.impl
 
 import android.content.Context
 import com.mini.ide.data.api.FileRepository
+import com.mini.ide.data.api.LessonRepository
 import com.mini.ide.data.api.ProjectRepository
 import com.mini.ide.data.api.SettingsRepository
 import com.mini.ide.data.api.TemplateRepository
@@ -31,6 +32,10 @@ abstract class DataBindsModule {
     @Binds
     @Singleton
     abstract fun bindContentStore(impl: DbContentStore): ContentStore
+
+    @Binds
+    @Singleton
+    abstract fun bindLessonRepository(impl: LessonRepositoryImpl): LessonRepository
 }
 
 @Module
@@ -44,6 +49,15 @@ object DataProvidesModule {
     @Provides
     @Singleton
     fun provideFileDao(db: MiniMeDatabase): FileDao = db.fileDao()
+
+    @Provides
+    @Singleton
+    fun provideLessonDao(db: MiniMeDatabase): LessonDao = db.lessonDao()
+
+    @Provides
+    @Singleton
+    fun provideLessonRepositoryImpl(dao: LessonDao): LessonRepositoryImpl =
+        LessonRepositoryImpl(dao)
 
     @Provides
     @Singleton

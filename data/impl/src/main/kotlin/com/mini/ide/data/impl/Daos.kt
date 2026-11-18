@@ -70,3 +70,30 @@ interface TemplateDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(templates: List<TemplateEntity>)
 }
+
+@Dao
+interface LessonDao {
+    @Query("SELECT * FROM lessons ORDER BY sortOrder ASC")
+    fun observeAll(): Flow<List<LessonEntity>>
+
+    @Query("SELECT * FROM lessons ORDER BY sortOrder ASC")
+    suspend fun all(): List<LessonEntity>
+
+    @Query("SELECT * FROM lessons WHERE id = :id")
+    suspend fun get(id: String): LessonEntity?
+
+    @Query("SELECT COUNT(*) FROM lessons")
+    suspend fun count(): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(lessons: List<LessonEntity>)
+
+    @Query("SELECT * FROM lesson_progress WHERE lessonId = :lessonId")
+    fun observeProgress(lessonId: String): Flow<LessonProgressEntity?>
+
+    @Query("SELECT * FROM lesson_progress WHERE lessonId = :lessonId")
+    suspend fun getProgress(lessonId: String): LessonProgressEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveProgress(progress: LessonProgressEntity)
+}

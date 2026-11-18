@@ -50,4 +50,6 @@ data class Settings(
     val previewDebounceMs: Long = 300L,
     val autoSave: Boolean = true,
     val sandboxMode: Boolean = true,
+    /** Phase2 教学功能开关（教程入口的"已启用引导"状态）。 */
+    val lessonEnabled: Boolean = false,
 )
