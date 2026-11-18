@@ -23,8 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.mini.ide.core.designsystem.LocalAppColors
+import com.mini.ide.core.uicommon.IDETopBar
+import com.mini.ide.core.uicommon.Icons
 import com.mini.ide.core.uicommon.Typography
 import com.mini.ide.feature.editor.EditorScreen
+import com.mini.ide.feature.lesson.LessonScreen
 import com.mini.ide.feature.preview.PreviewScreen
 import com.mini.ide.feature.project.ProjectScreen
 
@@ -32,6 +35,7 @@ import com.mini.ide.feature.project.ProjectScreen
 private sealed interface Screen {
     data object ProjectList : Screen
     data class Workspace(val projectId: String) : Screen
+    data class Lessons(val projectId: String) : Screen
 }
 
 /** 工作区视图模式。 */
@@ -50,15 +54,20 @@ fun MiniMeNavHost() {
         is Screen.Workspace -> WorkspaceScreen(
             projectId = current.projectId,
             onBack = { screen = Screen.ProjectList },
+            onOpenLessons = { screen = Screen.Lessons(current.projectId) },
+        )
+        is Screen.Lessons -> LessonScreen(
+            projectId = current.projectId,
+            onBack = { screen = Screen.Workspace(current.projectId) },
         )
     }
 }
 
 @Composable
-private fun WorkspaceScreen(projectId: String, onBack: () -> Unit) {
+private fun WorkspaceScreen(projectId: String, onBack: () -> Unit, onOpenLessons: () -> Unit) {
     var mode by remember { mutableStateOf(WorkspaceMode.SPLIT) }
     Column(modifier = Modifier.fillMaxSize().background(LocalAppColors.current.background)) {
-        ModeSwitcher(mode = mode, onModeChange = { mode = it })
+        ModeSwitcher(mode = mode, onModeChange = { mode = it }, onOpenLessons = onOpenLessons)
         when (mode) {
             WorkspaceMode.EDIT -> EditorScreen(projectId = projectId, onBack = onBack, modifier = Modifier.weight(1f))
             WorkspaceMode.PREVIEW -> PreviewScreen(projectId = projectId, modifier = Modifier.weight(1f))
@@ -89,7 +98,11 @@ private fun SplitView(projectId: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun ModeSwitcher(mode: WorkspaceMode, onModeChange: (WorkspaceMode) -> Unit) {
+private fun ModeSwitcher(
+    mode: WorkspaceMode,
+    onModeChange: (WorkspaceMode) -> Unit,
+    onOpenLessons: () -> Unit,
+) {
     val colors = LocalAppColors.current
     val items = listOf(
         "编辑" to WorkspaceMode.EDIT,
@@ -99,29 +112,38 @@ private fun ModeSwitcher(mode: WorkspaceMode, onModeChange: (WorkspaceMode) -> U
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(48.dp)
             .background(colors.background)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
     ) {
-        items.forEachIndexed { index, (label, value) ->
-            val selected = mode == value
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (selected) colors.primary else colors.surface)
-                    .clickable { onModeChange(value) },
-                contentAlignment = Alignment.Center,
-            ) {
-                BasicText(
-                    text = label,
-                    style = Typography.caption.copy(color = if (selected) colors.onPrimary else colors.onBackground),
-                )
+        Row(modifier = Modifier.weight(1f)) {
+            items.forEachIndexed { index, (label, value) ->
+                val selected = mode == value
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(32.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (selected) colors.primary else colors.surface)
+                        .clickable { onModeChange(value) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BasicText(
+                        text = label,
+                        style = Typography.caption.copy(color = if (selected) colors.onPrimary else colors.onBackground),
+                    )
+                }
+                if (index < items.lastIndex) Spacer(Modifier.width(8.dp))
             }
-            if (index < items.lastIndex) Spacer(Modifier.width(8.dp))
         }
+        Spacer(Modifier.width(8.dp))
+        // 教程入口（设计说明决策 6：常驻可见）
+        com.mini.ide.core.uicommon.IDEIconButton(
+            icon = Icons.GraduationCap,
+            onClick = onOpenLessons,
+            contentDescription = "教程",
+            modifier = Modifier.height(36.dp),
+        )
     }
 }

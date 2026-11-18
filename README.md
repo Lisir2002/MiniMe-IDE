@@ -12,10 +12,12 @@
 | --- | --- |
 | 应用名称 | MiniMe-IDE |
 | 包名 / applicationId | `com.mini.ide` |
-| 当前阶段 | **M4 MVP 闭环**（写代码 + 即时预览 + 保存，端到端打通） |
+| 当前阶段 | **M5 教学增强**（S6 教学系统激活 + 错误提示结构化，Phase2） |
 | 最低系统 | Android 12（API 31） |
 
 > **M4 已打通核心闭环**：项目列表 → 新建/打开 → HTML/CSS/JS 三文件编辑 → 300ms 防抖即时预览 → 自动/手动保存 → 控制台日志。编辑器为离线自实现内核（透明 textarea + 语法高亮镜像），完整实现 Bridge 协议，未来可无缝替换为 CodeMirror 6（Kotlin 引擎层零改动）。
+>
+> **M5 叠加教学能力**：工作区顶栏教程入口 → 2 节内置课程（分步任务 + 数据驱动校验 + 提示卡片 + 进度跟踪）；预览报错升级为结构化诊断（分类标签 + 中文教学建议 + 来源行号 + 分类过滤）。
 
 ---
 
@@ -28,7 +30,7 @@
 ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-daemon
 ```
 
-> 当前 78 个 JVM 单测覆盖数据层、引擎层、语言层、三个 feature 的 ViewModel 与桥接协议。
+> 当前 115 个 JVM 单测覆盖数据层、引擎层、语言层、四个 feature 的 ViewModel、桥接协议与教学诊断。
 
 > ⚠️ **全量测试与发行构建（assemble / release）不在本地执行，一律由 GitHub Actions 云端完成。**
 
@@ -55,14 +57,14 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 ```
 :app                              应用壳 / Hilt 装配层（唯一可依赖所有 impl）
 :core:common    (S8)              基础设施：常量、DispatcherProvider
-:core:model                       共享领域模型：Project / SourceFile / FileKind
+:core:model                       共享领域模型：Project / SourceFile / Lesson / ValidatorSpec / FileKind
 :core:designsystem  (S2)          主题令牌：色板、EditorTheme、Compose 主题
 :core:uicommon                    自绘组件库：玻璃/按钮/卡片/顶栏/标签栏/SVG 图标/动效
 :data:api / :data:impl  (S3)      数据系统：Repository / Room / ContentStore
-:engine:api / :engine:impl  (S4)  核心引擎：Editor / Render / Bridge / Project
+:engine:api / :engine:impl  (S4)  核心引擎：Editor / Render / Bridge / Project / Lesson / Diagnostic
 :language:api / :language:impl (S5) 语言与语法：可插拔 LanguageProfile / LanguageProvider
 :feature:project / editor / preview  MVP 功能模块（只依赖 api；editor/preview 含 WebView 适配与 assets）
-:feature:lesson     (S6)          教学系统（Phase2 激活）
+:feature:lesson     (S6)          教学系统（M5 已激活：课程列表/分步校验/进度/提示）
 :extension:api      (S7)          扩展点契约（仅接口，只留口不设计）
 :testdouble                       Fake 实现（测试 / 预览替换）
 ```
@@ -115,4 +117,4 @@ python3 scripts/check_schedule.py --version 1.0.0 --schedule release/schedule.ya
 
 ---
 
-*MiniMe-IDE · 教学型离线前端 IDE · M4 MVP 闭环阶段*
+*MiniMe-IDE · 教学型离线前端 IDE · M5 教学增强阶段（Phase2）*

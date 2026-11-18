@@ -7,6 +7,15 @@
 ## [Unreleased]
 
 ### Added
+- M5 教学增强（Phase2）：S6 教学系统激活 + 错误提示结构化（`9152fa8` 之后）
+  - `:core:model`：Lesson / LessonStep / ValidatorSpec / LessonTarget / CheckContext / StepResult / LessonProgress / LessonState 领域模型；Settings 新增 `lessonEnabled` 开关
+  - `:data:impl`：Room 升级 v2，新增 lessons / lesson_progress 两张表 + LessonDao + LessonRepositoryImpl + 2 节内置课程（第一个网页 / 给文字上色），幂等 seed
+  - `:engine:api/:impl`：LessonEngine（课程加载 / 数据驱动分步校验 / 进度推进 / 重置）+ StepValidator（Contains/Regex/AstRule 教学向宽松校验）
+  - DiagnosticEngine + DiagnosticRules：把运行时/控制台报错升级为「分类 + 中文教学建议 + 行号」结构化诊断，规则表驱动、纯 JVM 可测
+  - `:feature:lesson`：LessonViewModel + 自绘课程列表/详情分步 UI（指令/提示卡片/校验反馈/进度条/启用引导）
+  - `:feature:preview` 错误提示增强：日志带分类标签/教学建议卡片/来源行号、错误/警告计数徽标、分类过滤、新错误自动展开
+  - 工作区顶栏新增常驻教程入口（设计说明决策 6）
+  - M5 本地单测：教学仓库 / StepValidator / DiagnosticEngine / LessonEngine / LessonViewModel / 诊断接入（共 37 用例）
 - M4 MVP 闭环：项目列表 → 编辑 → 即时预览 → 保存端到端打通（`e7f347f` 之后）
   - S2 自绘组件库 `:core:uicommon`：磨砂玻璃/自绘按钮/卡片/顶栏/标签栏/语义化 SVG 图标/spring 动效/排版令牌
   - `:feature:project`：项目列表 ViewModel + 自绘卡片 UI，模板实例化 seed，打开信号导航
@@ -30,6 +39,8 @@
 - 工程规范体系：提交 / 发版说明 / 日志 / 文档规范
 
 ### Changed
+- Lesson.target 用纯数据 LessonTarget 替代蓝图里的 engine:api.PreviewDocument，避免 core:model 反向依赖（M5 设计决策 1）
+- PreviewLog 升级为结构化诊断（新增 category/title/suggestion 字段，均带默认值向后兼容）
 - EditorEngine / RenderEngine 接口继承 BridgeHandler，app 层统一装配 Fanout 桥接处理器
 - 补全 Hilt 依赖图：Repository impl / DbContentStore / DefaultDispatcherProvider 改由 Module @Provides 构造
 - 修正 KSP 版本（2.2.21-2.0.2 → 2.2.21-2.0.5）、统一库模块 namespace / Kotlin 插件配置
