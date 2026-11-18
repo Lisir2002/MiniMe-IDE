@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Fixed
+- 修复预览 WebView 线程崩溃：rc2 实测捕获 FATAL——`PreviewViewModel.renderOnce()` 在 IO 线程调 WebView 方法触发 `checkThread`。改为 `withContext(main)` 渲染；`PreviewWebViewPort`/`AndroidWebViewPort` 所有方法加主线程兜底（`onMain`）；新增 main 调度回归单测（174 用例）
+- 修复启动日志版本号硬编码：日志恒显示 `1.0.0-rc1`，改为读 `BuildConfig.VERSION_NAME` 并开启 `buildFeatures.buildConfig`
+
 ## [1.0.0-rc2] - 2026-11-19
 
 > 稳定性与隐私合规测试版：修复顶栏重叠与新建项目闪退，新增结构化日志（外部 `MINIIDE/logs/`）与 6 类权限系统（用前告知），默认主题改为浅色。云端全量测试 + R8 出包。
