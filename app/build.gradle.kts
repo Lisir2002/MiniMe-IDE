@@ -61,6 +61,7 @@ dependencies {
     implementation(project(":engine:api"))
     implementation(project(":engine:impl"))
     implementation(project(":language:api"))
+    implementation(project(":language:dsl"))
     implementation(project(":language:impl"))
     implementation(project(":feature:project"))
     implementation(project(":feature:editor"))

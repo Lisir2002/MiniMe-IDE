@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(project(":language:api"))
+    implementation(project(":language:dsl"))
     implementation(project(":core:common"))
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
