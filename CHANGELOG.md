@@ -6,7 +6,13 @@
 
 ## [Unreleased]
 
+## [1.0.0-rc1] - 2026-11-18
+
+> 首个功能完整测试版：M0–M6 全部里程碑落地，release 包开启 R8 混淆，RC 发版全流程云端化（全量测试 → 混淆出包 → 打 tag → 发版页面）。
+
 ### Added
+- 发版 1.0.0-rc1：`rc.yml` 改为 `workflow_dispatch` 云端一体化发版——校验版本真源/CHANGELOG → 全量单测 + 架构铁律 → `assembleRelease`（R8）→ 打 tag `v1.0.0-rc1` → GitHub Release 发版页面 + APK 上传
+- R8 混淆：`release` buildType 开启 `isMinifyEnabled` + `isShrinkResources`；重写 `proguard-rules.pro`，精准保留 `@JavascriptInterface` 桥接方法、字符串还原的枚举、Hilt 组件，其余真实混淆压缩
 - M6 自研语言（Phase3）：面向小白的中文 DSL MiniLang + 独立编译器 + S7 扩展点最小激活（`0d2e1b8` 之后）
   - `:language:api`：新增 `DslCompiler` 契约 + `CompileResult` / `CompileDiagnostic` / `CompileSeverity`（纯 JVM，向后兼容新增）
   - `:language:dsl`（新模块）：MiniLang 编译器——`DslLexer`（逐行词法 + 转义/注释/行号）→ `DslParser`（递归下降 + 错误不中断 + 深度上限保护）→ `DslAst` → `DslCodeGenerator`（HTML 转义/颜色词表/事件绑定）→ `DslCompilerImpl`；`DslProfile` 提供中文关键字高亮/补全/片段
@@ -44,11 +50,13 @@
 - M1 数据系统：Room 数据库（projects / source_files / templates）、DAO、四个 Repository 实现
 - 内置模板 seed（空白三件套 / Hello World）、ContentStore 可替换抽象、SettingsRepository
 - M1 本地单测：Repository CRUD / 模板实例化 / 级联删除 / JSON 往返（Robolectric + Room 内存库）
-- M0 工程脚手架：16 个 Gradle 模块、版本目录、编译期架构铁律校验
+- M0 工程脚手架：18 个 Gradle 模块、版本目录、编译期架构铁律校验
 - 本地单元测试：数据模型 / 常量 / 语言契约共 10 个用例
-- 工程规范体系：提交 / 发版说明 / 日志 / 文档规范
+- 工程规范体系：提交 / 发版 / 日志 / 文档规范
 
 ### Changed
+- RC 版本真源 `version.properties` 由 `0.1.0-rc1` 升级为 `1.0.0-rc1`（首个功能完整候选版本）
+- release 构建由未混淆改为 R8 代码混淆 + 资源压缩；`proguard-rules.pro` 由全量 keep 改为白名单 keep
 - 契约版本 v1.2：新增 `DslCompiler` / `CompileResult` / `CompileDiagnostic`；`DslProfile` 注册进 LanguageRegistry，模块数 17 → 18（M6）
 - `LanguageRegistry.forKind(FileKind.DSL)` 由回退 HTML 改为返回真实 MiniLang 档案（M6）
 - Lesson.target 用纯数据 LessonTarget 替代蓝图里的 engine:api.PreviewDocument，避免 core:model 反向依赖（M5 设计决策 1）
@@ -65,5 +73,6 @@
 - 发版排班门禁：正式版需 owner 排班批准，测试版自由发布
 - 应用标识：MiniMe-IDE / `com.mini.ide` / minSdk 31（Android 12）
 
-[Unreleased]: https://github.com/Lisir2002/MiniMe-IDE/compare/v0.1.0-rc1...HEAD
+[Unreleased]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc1...HEAD
+[1.0.0-rc1]: https://github.com/Lisir2002/MiniMe-IDE/compare/v0.1.0-rc1...v1.0.0-rc1
 [0.1.0-rc1]: https://github.com/Lisir2002/MiniMe-IDE/releases/tag/v0.1.0-rc1
