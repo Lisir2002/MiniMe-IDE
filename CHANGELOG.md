@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+## [1.0.0-rc2] - 2026-11-19
+
+> 稳定性与隐私合规测试版：修复顶栏重叠与新建项目闪退，新增结构化日志（外部 `MINIIDE/logs/`）与 6 类权限系统（用前告知），默认主题改为浅色。云端全量测试 + R8 出包。
+
 ### Fixed
 - 修复新建项目闪退：`ProjectEngineImpl.open()` 的 `observeActive().map{it!!}` 在 `combine` 初始发射 project=null 时抛 NPE，改用 `mapNotNull` 过滤中间态；补回归单测
 - 修复顶栏与系统状态栏文字重叠：内容延伸到状态栏下后，`MiniMeNavHost` 最外层统一消费 `statusBarsPadding`
@@ -88,6 +92,7 @@
 - 发版排班门禁：正式版需 owner 排班批准，测试版自由发布
 - 应用标识：MiniMe-IDE / `com.mini.ide` / minSdk 31（Android 12）
 
-[Unreleased]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc1...HEAD
+[Unreleased]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc2...HEAD
+[1.0.0-rc2]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc1...v1.0.0-rc2
 [1.0.0-rc1]: https://github.com/Lisir2002/MiniMe-IDE/compare/v0.1.0-rc1...v1.0.0-rc1
 [0.1.0-rc1]: https://github.com/Lisir2002/MiniMe-IDE/releases/tag/v0.1.0-rc1

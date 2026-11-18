@@ -2,7 +2,7 @@
 
 [![RC Build](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/rc.yml/badge.svg)](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/rc.yml)
 [![Release](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/release.yml/badge.svg)](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/release.yml)
-[![Version](https://img.shields.io/badge/version-1.0.0--rc1-blue)](version.properties)
+[![Version](https://img.shields.io/badge/version-1.0.0--rc2-blue)](version.properties)
 [![License](https://img.shields.io/badge/license-Proprietary-gray)](LICENSE)
 
 > **安卓上的前端编程教学 IDE —— 写代码 + 即时预览，完全离线。**
@@ -82,7 +82,7 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 
 ## 版本与发版
 
-- **当前版本**：`1.0.0-rc1`（首个功能完整测试版，M0–M6 全部落地，release 包已开 R8 混淆）。正式版 `1.0.0` 仍须 owner 排班批准后才发。
+- **当前版本**：`1.0.0-rc2`（在 rc1 基础上修复顶栏重叠/新建项目闪退，新增结构化日志与权限系统，默认浅色主题；release 包已开 R8 混淆）。正式版 `1.0.0` 仍须 owner 排班批准后才发。
 - **版本真源**：`version.properties`（`x.y.z` + `RC_NUMBER`）；versionCode 存于 `release/versioncode.txt`，单调递增（仅云端发版时递增）。
 - **测试版** `x.y.z-rcN`：手动触发 `rc.yml`（workflow_dispatch，输入版本号），云端全量测试 → R8 出包 → 打 tag `v*` → 创建 GitHub Release 发版页面并上传 APK，自由发布无门禁。
 - **正式版** `x.y.z`：手动触发 `release.yml`，**必须先通过排班门禁**，云端 `assembleRelease`（同样经 R8 混淆）。
@@ -124,4 +124,4 @@ python3 scripts/check_schedule.py --version 1.0.0 --schedule release/schedule.ya
 
 ---
 
-*MiniMe-IDE · 教学型离线前端 IDE · M7 稳定性与隐私合规 · v1.0.0-rc1（R8 混淆）*
+*MiniMe-IDE · 教学型离线前端 IDE · M7 稳定性与隐私合规 · v1.0.0-rc2（R8 混淆）*
