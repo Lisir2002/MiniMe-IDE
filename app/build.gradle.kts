@@ -61,6 +61,8 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:uicommon"))
+    implementation(project(":core:log"))
+    implementation(project(":core:permission"))
     implementation(project(":data:api"))
     implementation(project(":data:impl"))
     implementation(project(":engine:api"))
