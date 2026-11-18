@@ -45,7 +45,7 @@ class AppStartup(
         logger.info(
             module = "startup",
             message = "MiniMe-IDE 启动",
-            "version" to "1.0.0-rc1",
+            "version" to BuildConfig.VERSION_NAME,
             "storageGranted" to granted.toString(),
             "logDir" to path,
         )

@@ -27,6 +27,11 @@ android {
     namespace = "com.mini.ide"
     compileSdk = 36
 
+    // AGP 8 默认关闭 BuildConfig 生成；AppStartup 需读取 VERSION_NAME 写启动日志。
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.mini.ide"
         minSdk = 31

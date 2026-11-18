@@ -9,13 +9,18 @@ import com.mini.ide.engine.api.DiagnosticCategory
 import com.mini.ide.engine.api.LogLevel
 import com.mini.ide.engine.api.PreviewDocument
 import com.mini.ide.engine.api.ProjectState
+import com.mini.ide.engine.api.RenderEngine
+import com.mini.ide.engine.api.RenderEvent
+import com.mini.ide.engine.api.WebViewPort
 import com.mini.ide.testdouble.FakeDiagnosticEngine
 import com.mini.ide.testdouble.FakeProjectEngine
 import com.mini.ide.testdouble.FakeRenderEngine
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -141,5 +146,62 @@ class PreviewViewModelTest {
         vm.setFilter(LogFilter.WARNINGS)
         assertEquals(1, vm.filteredLogs(vm.uiState.value).size)
         assertEquals(LogLevel.WARN, vm.filteredLogs(vm.uiState.value).first().level)
+    }
+
+    // —— 回归：rc1 crash —— WebView 方法误在 IO 线程调用导致崩溃 ——
+
+    /** 记录 render 调用时所在 dispatcher 标记的 RenderEngine。 */
+    private class TaggingRenderEngine(
+        private val marker: ThreadLocal<String>,
+    ) : RenderEngine {
+        val renderDispatcherTags = mutableListOf<String?>()
+        private val _events = MutableSharedFlow<RenderEvent>(extraBufferCapacity = 8)
+        override val events: SharedFlow<RenderEvent> = _events
+        override fun bind(port: WebViewPort) = Unit
+        override fun render(document: PreviewDocument) {
+            renderDispatcherTags += marker.get()
+        }
+        override fun reload() = Unit
+        override fun onMessage(type: BridgeMessage, payload: String) = Unit
+        override fun release() = Unit
+    }
+
+    /** 在 dispatch 时给当前线程打标记的 dispatcher，用于区分 main 与 io。 */
+    private class MarkingDispatcher(
+        private val delegate: CoroutineDispatcher,
+        private val marker: ThreadLocal<String>,
+        private val tag: String,
+    ) : CoroutineDispatcher() {
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+            delegate.dispatch(context, Runnable {
+                val previous = marker.get()
+                marker.set(tag)
+                try { block.run() } finally {
+                    if (previous == null) marker.remove() else marker.set(previous)
+                }
+            })
+        }
+    }
+
+    @Test
+    fun `预览渲染切到main调度器_防止WebView线程崩溃`() = runTest(testDispatcher) {
+        val marker = ThreadLocal<String>()
+        val mainTag = "MAIN"
+        val ioDispatcher = StandardTestDispatcher(testScheduler)
+        val mainDispatcher = MarkingDispatcher(StandardTestDispatcher(testScheduler), marker, mainTag)
+        val scopedDispatchers = object : DispatcherProvider {
+            override val main: CoroutineDispatcher = mainDispatcher
+            override val io: CoroutineDispatcher = ioDispatcher
+            override val default: CoroutineDispatcher = ioDispatcher
+        }
+        val pe = FakeProjectEngine().apply { previewDocument = doc; pushState(state) }
+        val re = TaggingRenderEngine(marker)
+        val vm = PreviewViewModel(pe, re, settingsRepo, FakeDiagnosticEngine(), scopedDispatchers)
+
+        vm.run() // 从 io 启动，renderOnce 应切到 main 再渲染
+        advanceUntilIdle()
+
+        assertTrue("render 应至少发生一次", re.renderDispatcherTags.isNotEmpty())
+        assertEquals("render 必须在 main dispatcher 上执行", mainTag, re.renderDispatcherTags.first())
     }
 }

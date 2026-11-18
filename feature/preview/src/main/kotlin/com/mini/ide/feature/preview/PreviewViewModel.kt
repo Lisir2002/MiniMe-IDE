@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /** 一条预览日志（M5 升级为结构化诊断，字段带默认值向后兼容）。 */
@@ -106,7 +107,8 @@ class PreviewViewModel @Inject constructor(
     /** 立即渲染一次（手动运行）。 */
     fun run() = viewModelScope.launch(dispatchers.io) { renderOnce() }
 
-    fun reload() = renderEngine.reload()
+    /** 重新加载：WebView 方法必须在主线程。 */
+    fun reload() = viewModelScope.launch(dispatchers.main) { renderEngine.reload() }
 
     /** 预览桥接消息：转发给 RenderEngine 处理并聚合日志。 */
     fun onBridgeMessage(type: String, payload: String) {
@@ -114,10 +116,17 @@ class PreviewViewModel @Inject constructor(
         renderEngine.onMessage(msg, payload)
     }
 
-    private fun renderOnce() {
+    /**
+     * 渲染一次。文档拼装（纯内存）可在调用方线程完成，
+     * 但 render 内部会调用 WebViewPort.loadDataWithBaseUrl——WebView 方法必须在主线程，
+     * 否则触发 `A WebView method was called on thread ...` 崩溃（rc1/crash 复盘）。
+     */
+    private suspend fun renderOnce() {
         val document = projectEngine.currentPreviewDocument(baseUrl) ?: return
         currentDoc = document
-        renderEngine.render(PreviewBridgeScript.wrap(document))
+        withContext(dispatchers.main) {
+            renderEngine.render(PreviewBridgeScript.wrap(document))
+        }
     }
 
     private fun appendLog(log: PreviewLog) {
