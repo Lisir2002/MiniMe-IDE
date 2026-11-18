@@ -2,7 +2,7 @@
 
 [![RC Build](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/rc.yml/badge.svg)](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/rc.yml)
 [![Release](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/release.yml/badge.svg)](https://github.com/Lisir2002/MiniMe-IDE/actions/workflows/release.yml)
-[![Version](https://img.shields.io/badge/version-1.0.0--rc2-blue)](version.properties)
+[![Version](https://img.shields.io/badge/version-1.0.0--rc3-blue)](version.properties)
 [![License](https://img.shields.io/badge/license-Proprietary-gray)](LICENSE)
 
 > **安卓上的前端编程教学 IDE —— 写代码 + 即时预览，完全离线。**
@@ -82,11 +82,12 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 
 ## 版本与发版
 
-- **当前版本**：`1.0.0-rc2`（在 rc1 基础上修复顶栏重叠/新建项目闪退，新增结构化日志与权限系统，默认浅色主题；release 包已开 R8 混淆）。正式版 `1.0.0` 仍须 owner 排班批准后才发。
+- **当前版本**：`1.0.0-rc3`（统一正式签名解决覆盖安装冲突；修复预览 WebView 线程崩溃；启动日志版本号动态读取；release 包 R8 混淆）。正式版 `1.0.0` 仍须 owner 排班批准后才发。
 - **版本真源**：`version.properties`（`x.y.z` + `RC_NUMBER`）；versionCode 存于 `release/versioncode.txt`，单调递增（仅云端发版时递增）。
 - **测试版** `x.y.z-rcN`：手动触发 `rc.yml`（workflow_dispatch，输入版本号），云端全量测试 → R8 出包 → 打 tag `v*` → 创建 GitHub Release 发版页面并上传 APK，自由发布无门禁。
 - **正式版** `x.y.z`：手动触发 `release.yml`，**必须先通过排班门禁**，云端 `assembleRelease`（同样经 R8 混淆）。
 - **混淆**：所有 release 构建（`isMinifyEnabled` + `isShrinkResources`）均启用 R8，`proguard-rules.pro` 白名单保留 JS 桥接与反射入口。
+- **签名**：统一正式签名（固定 keystore，所有 rc/正式版同一把钥匙，覆盖安装不冲突）。keystore 二进制**永不入库**（`.gitignore` 排除），凭据存 GitHub Actions Secrets（`SIGNING_*`），云端构建前还原；本地无凭据时回退 debug 签名，不影响单测/编译冒烟。切换签名后设备上旧版（debug 签名）需卸载一次，之后各 rc 版本可直接覆盖。
 - **M7 稳定性/隐私**：默认亮色主题（白底黑字）；顶栏已回避系统状态栏；新建项目闪退已修（`ProjectEngine.open()` 过滤初始 null）；结构化日志写入外部存储根目录 `MINIIDE/logs/`（无权限时降级应用专属目录），全局崩溃捕获写 FATAL 堆栈；6 类权限（存储/网络/定位/相机/打开外部应用/安装未知应用）按需申请、用前告知，拒绝后优雅降级。详见仓库外 `M7-稳定性与隐私合规实现说明.md`。
 
 ### 排班门禁（正式版不可绕过）
@@ -124,4 +125,4 @@ python3 scripts/check_schedule.py --version 1.0.0 --schedule release/schedule.ya
 
 ---
 
-*MiniMe-IDE · 教学型离线前端 IDE · M7 稳定性与隐私合规 · v1.0.0-rc2（R8 混淆）*
+*MiniMe-IDE · 教学型离线前端 IDE · M7 稳定性与隐私合规 · v1.0.0-rc3（正式签名 + R8 混淆）*

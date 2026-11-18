@@ -6,9 +6,17 @@
 
 ## [Unreleased]
 
+## [1.0.0-rc3] - 2026-11-19
+
+> 稳定性修复版：统一正式签名（覆盖安装不再冲突）、修复预览 WebView 线程崩溃、启动日志版本号改为动态读取。R8 混淆 + 正式签名出包。
+
 ### Fixed
+- 统一正式签名解决覆盖安装冲突：此前 release 复用 debug 签名，云端每次 runner 重建导致签名随机变化，系统拒绝覆盖安装（需卸载旧版）。现生成固定正式 keystore（不入库），凭据存 GitHub Actions Secrets，`rc.yml`/`release.yml` 构建前还原；本地无凭据时回退 debug 不影响单测
 - 修复预览 WebView 线程崩溃：rc2 实测捕获 FATAL——`PreviewViewModel.renderOnce()` 在 IO 线程调 WebView 方法触发 `checkThread`。改为 `withContext(main)` 渲染；`PreviewWebViewPort`/`AndroidWebViewPort` 所有方法加主线程兜底（`onMain`）；新增 main 调度回归单测（174 用例）
 - 修复启动日志版本号硬编码：日志恒显示 `1.0.0-rc1`，改为读 `BuildConfig.VERSION_NAME` 并开启 `buildFeatures.buildConfig`
+
+### Changed
+- release buildType 签名由「复用 debug」改为「正式签名（Secrets）优先，debug 回退」；签名密钥二进制永久不入库（`.gitignore`）
 
 ## [1.0.0-rc2] - 2026-11-19
 
@@ -96,7 +104,8 @@
 - 发版排班门禁：正式版需 owner 排班批准，测试版自由发布
 - 应用标识：MiniMe-IDE / `com.mini.ide` / minSdk 31（Android 12）
 
-[Unreleased]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc2...HEAD
+[Unreleased]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc3...HEAD
+[1.0.0-rc3]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc2...v1.0.0-rc3
 [1.0.0-rc2]: https://github.com/Lisir2002/MiniMe-IDE/compare/v1.0.0-rc1...v1.0.0-rc2
 [1.0.0-rc1]: https://github.com/Lisir2002/MiniMe-IDE/compare/v0.1.0-rc1...v1.0.0-rc1
 [0.1.0-rc1]: https://github.com/Lisir2002/MiniMe-IDE/releases/tag/v0.1.0-rc1
