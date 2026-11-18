@@ -6,6 +6,21 @@
 
 ## [Unreleased]
 
+### Fixed
+- 修复新建项目闪退：`ProjectEngineImpl.open()` 的 `observeActive().map{it!!}` 在 `combine` 初始发射 project=null 时抛 NPE，改用 `mapNotNull` 过滤中间态；补回归单测
+- 修复顶栏与系统状态栏文字重叠：内容延伸到状态栏下后，`MiniMeNavHost` 最外层统一消费 `statusBarsPadding`
+
+### Added
+- M7 稳定性与隐私合规（Phase3.5）：
+  - `:core:log`（新模块）：结构化日志（对齐 CONVENTIONS §3）、`LogFormatter`（脱敏）、`FileLogWriter`（按日分片 + 大小轮转 + 7 天清理）、`AndroidLogPaths`（外部根目录 `MINIIDE/logs`，无权限降级应用专属目录）、`CrashHandler`（全局未捕获异常写 FATAL 堆栈）、`MiniLogger` 门面
+  - `:core:permission`（新模块）：6 类权限定义（存储/网络/定位/相机/打开外部应用/安装未知应用）、`PermissionManager`（rationale/流程决策）、`AndroidPermissionChecker`、`PermissionRationaleDialog`（玻璃风格用前告知）
+  - `MiniMeApp` 安装全局崩溃捕获；`MainActivity` 用前申请存储权限（dangerous 运行时弹窗 / special 跳设置页），拒绝后日志降级不丢
+  - Manifest 补齐 6 类权限声明；本地单测 149 → 173，模块数 18 → 20
+  - 默认主题改为亮色（白底黑字黑线）：`Theme.kt` / `themes.xml` / `SettingsRepositoryImpl` / `MainActivity` 四处统一
+
+### Changed
+- 默认主题由暗色改为亮色；顶栏 insets 由 app 层统一处理，`core:uicommon` 组件保持窗口无关
+
 ## [1.0.0-rc1] - 2026-11-18
 
 > 首个功能完整测试版：M0–M6 全部里程碑落地，release 包开启 R8 混淆，RC 发版全流程云端化（全量测试 → 混淆出包 → 打 tag → 发版页面）。

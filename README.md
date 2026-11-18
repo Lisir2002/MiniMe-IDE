@@ -32,7 +32,7 @@
 ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-daemon
 ```
 
-> 当前 149 个 JVM 单测覆盖数据层、引擎层、语言层（含 MiniLang 编译器）、四个 feature 的 ViewModel、桥接协议、教学诊断、扩展注册表与 DSL 预览接入。
+> 当前 173 个 JVM 单测覆盖数据层、引擎层、语言层（含 MiniLang 编译器）、四个 feature 的 ViewModel、桥接协议、教学诊断、扩展注册表、DSL 预览接入，以及新增的结构化日志（core:log）与权限系统（core:permission）。
 
 > ⚠️ **全量测试与发行构建（assemble / release）不在本地执行，一律由 GitHub Actions 云端完成。**
 
@@ -54,14 +54,16 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 
 ## 模块地图
 
-18 个 Gradle 模块，按 8 大系统分层。依赖方向单向向下，架构铁律由 `checkModuleRules` 编译期强制。
+20 个 Gradle 模块，按 8 大系统分层。依赖方向单向向下，架构铁律由 `checkModuleRules` 编译期强制。
 
 ```
 :app                              应用壳 / Hilt 装配层（唯一可依赖所有 impl）
 :core:common    (S8)              基础设施：常量、DispatcherProvider
 :core:model                       共享领域模型：Project / SourceFile / Lesson / ValidatorSpec / FileKind
-:core:designsystem  (S2)          主题令牌：色板、EditorTheme、Compose 主题
+:core:designsystem  (S2)          主题令牌：色板、EditorTheme、Compose 主题（默认亮色）
 :core:uicommon                    自绘组件库：玻璃/按钮/卡片/顶栏/标签栏/SVG 图标/动效
+:core:log           (M7)          结构化日志：CONVENTIONS 格式 / 按日分片+轮转 / 外部 MINIIDE 目录 / 全局崩溃捕获
+:core:permission    (M7)          隐私合规：6 类权限定义 / 用前申请 / rationale / 运行时弹窗+设置页
 :data:api / :data:impl  (S3)      数据系统：Repository / Room / ContentStore
 :engine:api / :engine:impl  (S4)  核心引擎：Editor / Render / Bridge / Project / Lesson / Diagnostic
 :language:api / :language:dsl / :language:impl (S5) 语言与语法：可插拔 LanguageProfile / MiniLang 编译器 / LanguageProvider / 注册表
@@ -85,6 +87,7 @@ ANDROID_HOME=/opt/android-sdk ./gradlew testDebugUnitTest checkModuleRules --no-
 - **测试版** `x.y.z-rcN`：手动触发 `rc.yml`（workflow_dispatch，输入版本号），云端全量测试 → R8 出包 → 打 tag `v*` → 创建 GitHub Release 发版页面并上传 APK，自由发布无门禁。
 - **正式版** `x.y.z`：手动触发 `release.yml`，**必须先通过排班门禁**，云端 `assembleRelease`（同样经 R8 混淆）。
 - **混淆**：所有 release 构建（`isMinifyEnabled` + `isShrinkResources`）均启用 R8，`proguard-rules.pro` 白名单保留 JS 桥接与反射入口。
+- **M7 稳定性/隐私**：默认亮色主题（白底黑字）；顶栏已回避系统状态栏；新建项目闪退已修（`ProjectEngine.open()` 过滤初始 null）；结构化日志写入外部存储根目录 `MINIIDE/logs/`（无权限时降级应用专属目录），全局崩溃捕获写 FATAL 堆栈；6 类权限（存储/网络/定位/相机/打开外部应用/安装未知应用）按需申请、用前告知，拒绝后优雅降级。详见仓库外 `M7-稳定性与隐私合规实现说明.md`。
 
 ### 排班门禁（正式版不可绕过）
 
@@ -121,4 +124,4 @@ python3 scripts/check_schedule.py --version 1.0.0 --schedule release/schedule.ya
 
 ---
 
-*MiniMe-IDE · 教学型离线前端 IDE · M6 自研语言阶段（Phase3）· v1.0.0-rc1（R8 混淆）*
+*MiniMe-IDE · 教学型离线前端 IDE · M7 稳定性与隐私合规 · v1.0.0-rc1（R8 混淆）*
