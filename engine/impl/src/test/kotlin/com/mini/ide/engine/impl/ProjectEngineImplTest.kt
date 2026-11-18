@@ -45,6 +45,24 @@ class ProjectEngineImplTest {
     }
 
     @Test
+    fun `open_初始中间态不过滤null不抛NPE`() = runTest {
+        // 回归：新建项目闪退根因——combine 初始发射 project=null，
+        // 旧实现 map{it!!} 抛 NPE。新实现 mapNotNull 应安全过滤。
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val engine = ProjectEngineImpl(
+            FakeProjectRepository(listOf(Project("p1", "Demo"))),
+            FakeFileRepository(sampleFiles()),
+            dispatcher,
+        )
+        val flow = engine.open("p1")
+        // 在异步赋值完成前先订阅，验证不抛异常
+        val result = runCatching { advanceUntilIdle(); flow.first() }
+        assertTrue("open() 初值不得抛 NPE: ${result.exceptionOrNull()}", result.isSuccess)
+        assertEquals("p1", result.getOrNull()?.project?.id)
+        engine.close()
+    }
+
+    @Test
     fun `markContentDirty_标记脏并同步内存镜像`() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val projectRepo = FakeProjectRepository(listOf(Project("p1", "Demo")))

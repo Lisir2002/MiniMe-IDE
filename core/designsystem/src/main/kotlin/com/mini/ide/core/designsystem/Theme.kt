@@ -9,17 +9,16 @@ val LocalAppColors = staticCompositionLocalOf<AppColors> {
 }
 
 /**
- * 全局主题入口。暗色为默认主主题，亮色可选（视觉规范已定稿）。
- * M0 仅搭骨架；磨砂玻璃/自绘组件在 M1 填充。
+ * 全局主题入口。亮色为默认主主题（白底黑字黑线），暗色可选（视觉规范已定稿）。
  */
 @Composable
 fun IDETheme(
-    mode: ThemeMode = ThemeMode.DARK,
+    mode: ThemeMode = ThemeMode.LIGHT,
     content: @Composable () -> Unit,
 ) {
     val colors = when (mode) {
-        ThemeMode.LIGHT -> LightColors
-        ThemeMode.DARK, ThemeMode.SYSTEM -> DarkColors
+        ThemeMode.LIGHT, ThemeMode.SYSTEM -> LightColors
+        ThemeMode.DARK -> DarkColors
     }
     CompositionLocalProvider(LocalAppColors provides colors) {
         content()

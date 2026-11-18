@@ -30,8 +30,8 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
     }
 
     private fun load(): Settings = Settings(
-        themeMode = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, "DARK")!!) }
-            .getOrDefault(ThemeMode.DARK),
+        themeMode = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, "LIGHT")!!) }
+            .getOrDefault(ThemeMode.LIGHT),
         editorFontSizeSp = prefs.getInt(KEY_FONT_SIZE, 14),
         wordWrap = prefs.getBoolean(KEY_WORD_WRAP, false),
         previewDebounceMs = prefs.getLong(KEY_PREVIEW_DEBOUNCE, 300L),

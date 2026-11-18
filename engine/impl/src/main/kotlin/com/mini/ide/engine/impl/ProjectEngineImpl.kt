@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 
 /**
@@ -60,7 +61,9 @@ class ProjectEngineImpl(
                 }
             }
         }
-        return observeActive().map { it!! }
+        // combine 在 _project 异步赋值前会先发射一次 project=null 的中间态；
+        // 用 mapNotNull 过滤，避免 it!! 抛 NPE 导致新建项目后进入工作区闪退。
+        return observeActive().mapNotNull { it }
     }
 
     override fun observeActive(): Flow<ProjectState?> = combine(

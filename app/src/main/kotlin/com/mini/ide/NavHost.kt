@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -47,19 +48,23 @@ private enum class WorkspaceMode { EDIT, SPLIT, PREVIEW }
 @Composable
 fun MiniMeNavHost() {
     var screen by remember { mutableStateOf<Screen>(Screen.ProjectList) }
-    when (val current = screen) {
-        Screen.ProjectList -> ProjectScreen(
-            onOpenProject = { id -> screen = Screen.Workspace(id) },
-        )
-        is Screen.Workspace -> WorkspaceScreen(
-            projectId = current.projectId,
-            onBack = { screen = Screen.ProjectList },
-            onOpenLessons = { screen = Screen.Lessons(current.projectId) },
-        )
-        is Screen.Lessons -> LessonScreen(
-            projectId = current.projectId,
-            onBack = { screen = Screen.Workspace(current.projectId) },
-        )
+    // 内容已延伸到状态栏下（见 MainActivity setDecorFitsSystemWindows(false)），
+    // 统一在此消费 statusBars insets，避免顶栏标题与系统状态栏重叠。
+    Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+        when (val current = screen) {
+            Screen.ProjectList -> ProjectScreen(
+                onOpenProject = { id -> screen = Screen.Workspace(id) },
+            )
+            is Screen.Workspace -> WorkspaceScreen(
+                projectId = current.projectId,
+                onBack = { screen = Screen.ProjectList },
+                onOpenLessons = { screen = Screen.Lessons(current.projectId) },
+            )
+            is Screen.Lessons -> LessonScreen(
+                projectId = current.projectId,
+                onBack = { screen = Screen.Workspace(current.projectId) },
+            )
+        }
     }
 }
 
