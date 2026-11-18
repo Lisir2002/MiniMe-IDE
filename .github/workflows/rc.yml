@@ -88,12 +88,13 @@ jobs:
 
       - name: 校验 R8 产物存在
         run: |
-          APK="app/build/outputs/apk/release/app-release.apk"
-          if [ ! -f "$APK" ]; then
-            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [ERROR  ] [build   ] R8 产物缺失 path=$APK"
+          APK=$(find app/build/outputs/apk/release -name '*.apk' -type f -print -quit 2>/dev/null)
+          if [ -z "$APK" ] || [ ! -f "$APK" ]; then
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [ERROR  ] [build   ] R8 产物缺失 dir=app/build/outputs/apk/release"
             exit 1
           fi
-          echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [build   ] R8 产物就绪 size=$(du -h "$APK" | cut -f1)"
+          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+          echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [build   ] R8 产物就绪 path=$APK size=$(du -h "$APK" | cut -f1)"
 
       - name: 生成发版说明（从 CHANGELOG 提取该版本段）
         run: |
@@ -130,7 +131,7 @@ jobs:
           name: MiniMe-IDE ${{ inputs.version }}
           body_path: release_notes.md
           prerelease: true
-          files: app/build/outputs/apk/release/app-release.apk
+          files: app/build/outputs/apk/release/*.apk
           fail_on_unmatched_files: true
 
       - name: 上传 RC 产物（备份）

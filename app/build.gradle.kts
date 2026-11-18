@@ -42,6 +42,9 @@ android {
             // R8：代码混淆 + 资源压缩，测试版/正式版共用 release buildType，均开混淆。
             isMinifyEnabled = true
             isShrinkResources = true
+            // 教学项目测试版复用 debug 签名，产出可安装的 app-release.apk；
+            // 正式上架时替换为正式 keystore（见 docs/CONVENTIONS.md 发版规范）。
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
