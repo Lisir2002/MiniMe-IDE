@@ -23,6 +23,18 @@ val isReleaseBuild = gradle.startParameter.taskNames.any {
 }
 val releaseVersionOverride = providers.gradleProperty("releaseVersion").orNull
 
+// 正式签名：凭据来自环境变量（云端由 GitHub Actions Secrets 注入）。
+// keystore 二进制不入库（.gitignore 排除），本地开发无这些变量时 release buildType
+// 回退到 debug 签名，保证本地单测/编译冒烟不受影响；云端发版必须注入完整变量。
+val signingStoreFile = System.getenv("SIGNING_KEYSTORE_FILE")?.let { rootProject.file(it) }
+val signingStorePassword = System.getenv("SIGNING_STORE_PASSWORD")
+val signingKeyAlias = System.getenv("SIGNING_KEY_ALIAS")
+val signingKeyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+val hasReleaseSigning = signingStoreFile?.exists() == true &&
+    !signingStorePassword.isNullOrBlank() &&
+    !signingKeyAlias.isNullOrBlank() &&
+    !signingKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.mini.ide"
     compileSdk = 36
@@ -30,6 +42,17 @@ android {
     // AGP 8 默认关闭 BuildConfig 生成；AppStartup 需读取 VERSION_NAME 写启动日志。
     buildFeatures {
         buildConfig = true
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = signingStoreFile
+                storePassword = signingStorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
+        }
     }
 
     defaultConfig {
@@ -47,9 +70,12 @@ android {
             // R8：代码混淆 + 资源压缩，测试版/正式版共用 release buildType，均开混淆。
             isMinifyEnabled = true
             isShrinkResources = true
-            // 教学项目测试版复用 debug 签名，产出可安装的 app-release.apk；
-            // 正式上架时替换为正式 keystore（见 docs/CONVENTIONS.md 发版规范）。
-            signingConfig = signingConfigs.getByName("debug")
+            // 统一正式签名：云端注入 Secrets 后用固定 keystore（所有 rc/正式版同一把钥匙，
+            // 覆盖安装不再冲突）；本地无凭据时回退 debug 签名，不影响单测/编译冒烟。
+            signingConfig = if (hasReleaseSigning)
+                signingConfigs.getByName("release")
+            else
+                signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

@@ -83,7 +83,21 @@ jobs:
       - name: 架构铁律校验
         run: ./gradlew checkModuleRules --no-daemon
 
-      - name: 构建 RC 产物（release buildType + R8 混淆 + rc 版本号）
+      - name: 还原正式签名 keystore（来自 Secrets，不入库）
+        run: |
+          echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [sign   ] 还原正式签名材料"
+          printf '%s' '${{ secrets.SIGNING_KEYSTORE }}' | base64 -d > app/minimide-release.jks
+          test -s app/minimide-release.jks || {
+            echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [ERROR  ] [sign   ] keystore 还原失败"
+            exit 1
+          }
+          echo "SIGNING_KEYSTORE_FILE=app/minimide-release.jks" >> "$GITHUB_ENV"
+          echo "SIGNING_STORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "[$(date -u +%Y-%m-%dT%H:%M:%S+00:00)] [INFO   ] [sign   ] 签名材料已就绪（值不回显）"
+
+      - name: 构建 RC 产物（正式签名 + R8 混淆 + rc 版本号）
         run: ./gradlew assembleRelease --no-daemon -PreleaseVersion="${{ inputs.version }}"
 
       - name: 校验 R8 产物存在
