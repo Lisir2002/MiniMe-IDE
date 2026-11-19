@@ -25,11 +25,11 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.mini.ide.core.designsystem.Glass
 import com.mini.ide.core.designsystem.LocalAppColors
+import com.mini.ide.core.designsystem.Surface
 
 /**
- * 底部标签栏 —— 视觉规范 §7.2 IDETabBar（Thick）+ §6 选中态蓝色。
+ * 底部标签栏 —— 实色底栏 + 选中态蓝色。
  */
 @Composable
 fun IDETabBar(
@@ -42,7 +42,7 @@ fun IDETabBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(Modifier.glass(Glass.Thick, colors.surface, RoundedCornerShape(0.dp)))
+            .then(Modifier.surface(Surface.Thick, colors.surface, RoundedCornerShape(0.dp), colors.separator))
             .height(64.dp)
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,

@@ -2,6 +2,7 @@ package com.mini.ide.core.uicommon
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -15,12 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.mini.ide.core.designsystem.Glass
 import com.mini.ide.core.designsystem.LocalAppColors
+import com.mini.ide.core.designsystem.Surface
 
 /**
- * 顶部吸顶玻璃栏 —— 视觉规范 §7.2 IDETopBar（Thick）+ §6 语义图标。
- * 左：导航动作（如返回）；中：标题；右：动作槽。
+ * 顶部吸顶栏（实色）—— 左：导航动作；中：标题 + 副标题（上下两行）；右：动作槽。
  */
 @Composable
 fun IDETopBar(
@@ -36,7 +36,7 @@ fun IDETopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(Modifier.glass(Glass.Thick, colors.surface, androidx.compose.foundation.shape.RoundedCornerShape(0.dp)))
+                .then(Modifier.surface(Surface.Thick, colors.surface, androidx.compose.foundation.shape.RoundedCornerShape(0.dp)))
                 .height(56.dp)
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -45,7 +45,7 @@ fun IDETopBar(
                 IDEIconButton(icon = navIcon, onClick = onNavClick, contentDescription = "返回")
                 Spacer(Modifier.width(8.dp))
             }
-            Box(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
                 BasicText(text = title, style = Typography.bodyStrong.copy(color = colors.onBackground))
                 if (subtitle != null) {
                     BasicText(

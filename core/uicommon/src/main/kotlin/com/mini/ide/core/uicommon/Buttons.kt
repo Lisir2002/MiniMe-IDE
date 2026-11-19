@@ -27,8 +27,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.mini.ide.core.designsystem.Glass
 import com.mini.ide.core.designsystem.LocalAppColors
+import com.mini.ide.core.designsystem.Surface
 
 /**
  * 主操作按钮（蓝填充）—— 视觉规范 §7.2。按压 scale 0.97，spring。
@@ -78,7 +78,7 @@ fun IDEPrimaryButton(
 }
 
 /**
- * 次按钮（玻璃底 + 描边）—— 视觉规范 §7.2。
+ * 次按钮（实色底 + 描边）。
  */
 @Composable
 fun IDESecondaryButton(
@@ -96,7 +96,7 @@ fun IDESecondaryButton(
         modifier = modifier
             .height(44.dp)
             .graphicsLayerScale(scale)
-            .then(Modifier.glass(Glass.Thin, colors.surface, RoundedCornerShape(12.dp)))
+            .then(Modifier.surface(Surface.Thin, colors.surface, RoundedCornerShape(12.dp), colors.separator))
             .clip(RoundedCornerShape(12.dp))
             .clickable(interactionSource = interaction, indication = null) { onClick() }
             .padding(horizontal = 16.dp),
@@ -117,7 +117,7 @@ fun IDESecondaryButton(
     }
 }
 
-/** 图标按钮：工具栏用，语义图标 + 玻璃底。 */
+/** 图标按钮：工具栏用，语义图标 + 实色底。 */
 @Composable
 fun IDEIconButton(
     icon: ImageVector,
@@ -136,7 +136,7 @@ fun IDEIconButton(
             .size(40.dp)
             .graphicsLayerScale(scale)
             .clip(RoundedCornerShape(10.dp))
-            .then(Modifier.glass(Glass.Thin, colors.surface, RoundedCornerShape(10.dp)))
+            .then(Modifier.surface(Surface.Thin, colors.surface, RoundedCornerShape(10.dp), colors.separator))
             .clickable(interactionSource = interaction, indication = null, enabled = enabled) { onClick() },
         contentAlignment = Alignment.Center,
     ) {

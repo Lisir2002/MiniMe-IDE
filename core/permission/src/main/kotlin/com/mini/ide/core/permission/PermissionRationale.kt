@@ -18,15 +18,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.mini.ide.core.designsystem.Glass
 import com.mini.ide.core.designsystem.LocalAppColors
+import com.mini.ide.core.designsystem.Surface
 import com.mini.ide.core.uicommon.IDESecondaryButton
 import com.mini.ide.core.uicommon.Typography
-import com.mini.ide.core.uicommon.glass
+import com.mini.ide.core.uicommon.surface
 
 /**
  * 权限用途说明对话框（隐私合规：用前告知，用户知情同意）。
- * 玻璃卡片风格，复用自绘组件，视觉与全局一致。
+ * 实色卡片风格，复用自绘组件，视觉与全局一致。
  */
 @Composable
 fun PermissionRationaleDialog(
@@ -40,7 +40,7 @@ fun PermissionRationaleDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .glass(Glass.Thick, colors.surface, RoundedCornerShape(20.dp))
+                .surface(Surface.Regular, colors.surface, RoundedCornerShape(20.dp), colors.separator)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
